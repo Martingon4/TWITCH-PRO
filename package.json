@@ -1,0 +1,13 @@
+{
+  "name": "nexo-twitch-escape-room",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Escape Room cooperativo para chat de Twitch con Co-Caster visual.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

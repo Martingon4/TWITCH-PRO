@@ -2,7 +2,31 @@
   const $ = (id) => document.getElementById(id);
   const chatMessages = $("chatMessages");
   const input = $("chatInput");
-  const state = { clues: {}, energy: 12, opened: false, effects: true, messages: 0, toastTimer: null, eventTimer: null, captionTimer: null };
+  const objectMeta = {
+    reloj: { key: "clock", slot: "slotOne", display: "clockStatus", card: "clueClock", label: "HORA" },
+    estatua: { key: "statue", slot: "slotTwo", display: "statueStatus", card: "clueStatue", label: "PIEDRA" },
+    antorcha: { key: "torch", slot: "slotThree", display: "torchStatus", card: "clueTorch", label: "LLAMA" },
+  };
+  const fallbackRoom = {
+    title: "El Archivo Sumergido",
+    theme: "archivo submarino",
+    environment: "underwater",
+    opening: "Una cámara sellada esconde un secreto. El chat debe reunir tres cifras y escapar en equipo.",
+    clues: {
+      reloj: { digit: "2", hint: "El reloj se detuvo a las 02:00. ¿Qué cifra indica la hora?", caption: "El reloj se detuvo a las 02:00. Primera cifra: 2." },
+      estatua: { digit: "4", hint: "La estatua sostiene cuatro dedos; cuenta los dedos de piedra.", caption: "La estatua sostiene cuatro dedos. Segunda cifra: 4." },
+      antorcha: { digit: "1", hint: "Solo una antorcha sigue encendida; cuenta la llama.", caption: "Solo una antorcha sigue encendida. Tercera cifra: 1." },
+    },
+    code: "241",
+    source: "plantilla",
+  };
+  const state = {
+    clues: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
+    participants: new Set(), contributionTimes: new Map(), chatContext: [],
+    serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
+    eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null,
+    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, styleVotes: new Map(),
+  };
   const users = [
     { name: "pixelpirata", avatar: "P", color: "coral" },
     { name: "luna.exe", avatar: "L", color: "violet" },
@@ -10,27 +34,18 @@
     { name: "m4rte", avatar: "M", color: "blue" },
     { name: "n0cturna", avatar: "N", color: "" },
   ];
-  const clueData = {
-    reloj: { key: "clock", digit: "2", status: "HORA · 02", slot: "slotOne", display: "clockStatus", label: "HORA", caption: "El reloj se detuvo a las 02:00. Primera cifra: 2." },
-    estatua: { key: "statue", digit: "4", status: "PIEDRA · IV", slot: "slotTwo", display: "statueStatus", label: "PIEDRA", caption: "La estatua sostiene cuatro dedos. Segunda cifra: 4." },
-    antorcha: { key: "torch", digit: "1", status: "LLAMA · I", slot: "slotThree", display: "torchStatus", label: "LLAMA", caption: "Solo una antorcha sigue encendida. Tercera cifra: 1." },
-  };
-  const openingLines = [
-    "Esa puerta lleva cerrada más tiempo que mi última buena predicción.",
-    "¡Se movió! Chat, oficialmente tienen más fuerza que el streamer.",
-    "La bóveda cedió. Voy a fingir que lo tenía calculado.",
-  ];
   const casterLines = {
     inspect: ["Una pista más. El chat está haciendo el trabajo de detective que nadie le pidió al streamer.", "¡Buen ojo! A este ritmo, la sala se queda sin secretos antes que el canal sin teorías."],
     wrong: ["Ese código no abrió nada. La puerta juzga en silencio, yo no tanto.", "Casi… si la bóveda tuviera sentimientos, ahora estaría un poco decepcionada."],
     progress: ["La energía sube. ¿Quién diría que escribir en mayúsculas servía para algo?", "¡Efecto desbloqueado! El chat acaba de mejorar la iluminación. El presupuesto era imaginario."],
     hint: ["Pista para el equipo: miren los detalles que parecen demasiado obvios.", "No es por presionar, pero hay una estatua que lleva rato esperando atención."],
+    room: ["Nueva sala, nuevo misterio y el chat ya viene con teorías de sobra.", "Una habitación recién salida del generador. Mimo recomienda mirar antes de tocar."],
     idle: ["Tres pistas, una puerta y cientos de expertos en el chat. ¿Qué podría salir mal?", "El silencio de la bóveda es inquietante. El del chat, más."],
   };
   const initialMessages = [
     { user: "pixelpirata", color: "coral", text: "entramos al archivo 👀" },
     { user: "luna.exe", color: "violet", text: "esa puerta está enorme" },
-    { user: "cafeyboss", color: "gold", text: "!examinar reloj", command: true },
+    { user: "cafeyboss", color: "gold", text: "la cerradura tiene tres ranuras" },
     { user: "m4rte", color: "blue", text: "yo voy por la estatua" },
     { user: "n0cturna", color: "", text: "chat detective en 3... 2..." },
     { user: "pixelpirata", color: "coral", text: "¿vieron el símbolo de la puerta?" },
@@ -40,28 +55,47 @@
     return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   }
 
-  function addMessage({ user, color = "", text, system = false, caster = false, highlight = false, good = false, command = false }) {
+  async function api(path, options = {}) {
+    const response = await fetch(path, { ...options, headers: { "content-type": "application/json", ...(options.headers || {}) } });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `La solicitud falló (${response.status}).`);
+    return body;
+  }
+
+  function addMessage({ user = "chat", color = "", text = "", system = false, caster = false, highlight = false, good = false, command = false, source = "demo" }) {
+    const safeText = String(text).slice(0, 180);
     const row = document.createElement("div");
     row.className = `message${system ? " system" : ""}${caster ? " caster-message" : ""}${highlight ? " highlight" : ""}${good ? " good" : ""}`;
-    const initials = caster ? "✦" : system ? "✦" : escapeHTML(user.slice(0, 1).toUpperCase());
-    const safeUser = escapeHTML(user);
-    const content = command ? `<span class="command">${escapeHTML(text)}</span>` : escapeHTML(text);
-    row.innerHTML = `<span class="message-avatar ${escapeHTML(color)}${caster ? " caster-mini" : ""}">${initials}</span><div class="message-content"><div class="message-line"><span class="message-name${system ? " mod" : ""}">${safeUser}</span><span class="message-time">${new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false })}</span></div><div class="message-text">${content}</div></div>`;
+    const initials = caster || system ? "✦" : escapeHTML(String(user).slice(0, 1).toUpperCase());
+    const content = command ? `<span class="command">${escapeHTML(safeText)}</span>` : escapeHTML(safeText);
+    row.innerHTML = `<span class="message-avatar ${escapeHTML(color)}${caster ? " caster-mini" : ""}">${initials}</span><div class="message-content"><div class="message-line"><span class="message-name${system ? " mod" : ""}">${escapeHTML(user)}</span><span class="message-time">${new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false })}${source === "twitch" ? " · TWITCH" : ""}</span></div><div class="message-text">${content}</div></div>`;
     chatMessages.appendChild(row);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     while (chatMessages.children.length > 70) chatMessages.removeChild(chatMessages.firstChild);
     state.messages += 1;
     $("momentCount").textContent = String(Math.floor(state.messages / 4));
+    if (!system && !caster) state.chatContext.push({ user: String(user).slice(0, 24), text: safeText });
+    if (state.chatContext.length > 18) state.chatContext.shift();
+    if (!system && !caster) state.participants.add(String(user).toLocaleLowerCase("es"));
+    updateParticipantCount();
+  }
+
+  function updateParticipantCount() {
+    const count = state.participants.size;
+    $("viewerCount").textContent = String(count);
+    $("chatOnline").textContent = String(count);
   }
 
   function setCaster(text, addToChat = true) {
-    $("casterLine").textContent = text;
+    const safeLine = String(text || "").replace(/[<>\u0000-\u001f]/g, " ").trim().slice(0, 180);
+    if (!safeLine) return;
+    $("casterLine").textContent = safeLine;
     const card = $("casterCard");
     card.classList.remove("pop", "quiet");
     if (!state.effects) card.classList.add("quiet");
     void card.offsetWidth;
     card.classList.add("pop");
-    if (addToChat && state.effects) addMessage({ user: "MIMO · CO-CASTER", text, caster: true });
+    if (addToChat && state.effects) addMessage({ user: "MIMO · CO-CASTER", text: safeLine, caster: true });
   }
 
   function randomLine(type) {
@@ -69,12 +103,26 @@
     return lines[Math.floor(Math.random() * lines.length)];
   }
 
+  async function requestCaster(trigger) {
+    if (state.casterBusy) return;
+    state.casterBusy = true;
+    if (state.serverAvailable) {
+      try {
+        await api("/api/caster", { method: "POST", body: JSON.stringify({ trigger, context: state.chatContext.slice(-8) }) });
+        return;
+      } catch {}
+      finally { state.casterBusy = false; }
+    }
+    setCaster(randomLine(trigger));
+    state.casterBusy = false;
+  }
+
   function showToast(message) {
     const toast = $("toast");
     toast.textContent = message;
     toast.classList.add("show");
     window.clearTimeout(state.toastTimer);
-    state.toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2500);
+    state.toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2800);
   }
 
   function showEvent(message) {
@@ -82,15 +130,25 @@
     event.lastElementChild.textContent = message;
     event.classList.add("visible");
     window.clearTimeout(state.eventTimer);
-    state.eventTimer = window.setTimeout(() => event.classList.remove("visible"), 2600);
+    state.eventTimer = window.setTimeout(() => event.classList.remove("visible"), 2800);
   }
 
   function showCaption(message) {
     const caption = $("sceneCaption");
-    caption.lastElementChild.textContent = message;
+    caption.lastElementChild.textContent = String(message).slice(0, 180);
     caption.classList.add("visible");
     window.clearTimeout(state.captionTimer);
-    state.captionTimer = window.setTimeout(() => caption.classList.remove("visible"), 4200);
+    state.captionTimer = window.setTimeout(() => caption.classList.remove("visible"), 4500);
+  }
+
+  function rewardUser(user, points, cooldown = 0) {
+    const key = String(user).toLocaleLowerCase("es");
+    const now = Date.now();
+    const previous = state.contributionTimes.get(key) || 0;
+    if (cooldown && now - previous < cooldown) return false;
+    state.contributionTimes.set(key, now);
+    updateEnergy(points);
+    return true;
   }
 
   function updateEnergy(amount) {
@@ -99,13 +157,12 @@
     state.energy = Math.min(100, state.energy + amount);
     $("energyValue").textContent = String(state.energy);
     $("energyFill").style.width = `${state.energy}%`;
-    const scene = $("scene");
     const thresholds = [35, 65, 90];
     thresholds.forEach((threshold, index) => {
-      if (state.energy >= threshold) scene.classList.add(`energy-${threshold}`);
+      if (state.energy >= threshold) $("scene").classList.add(`energy-${threshold}`);
       if (before < threshold && state.energy >= threshold) {
-        showEvent(["¡Lámparas activadas!", "¡La sala revela nuevos detalles!", "¡El chat cargó un pulso de energía!"][index]);
-        if (index === 0) setCaster(randomLine("progress"));
+        showEvent(["¡Lámparas activadas!", "¡Nuevo efecto visual desbloqueado!", "¡El chat cargó un pulso final!"][index]);
+        if (index === 0) requestCaster("progress");
         else if (state.effects) showToast(["Efecto desbloqueado: luces de la sala", "Efecto desbloqueado: visión submarina", "Efecto desbloqueado: pulso final"][index]);
       }
     });
@@ -113,149 +170,401 @@
     $("nextUnlock").textContent = next ? `Siguiente efecto · ${next}%` : "¡Todos los efectos activos!";
   }
 
-  function revealClue(objectName, user) {
-    const clue = clueData[objectName];
-    if (!clue) {
+  function getCode() {
+    return ["reloj", "estatua", "antorcha"].map((id) => state.room.clues[id].digit).join("");
+  }
+
+  function revealClue(objectName, user, source = "demo") {
+    const id = objectName.toLocaleLowerCase("es").replace(/[.!?]+$/, "");
+    const meta = objectMeta[id];
+    const clue = state.room.clues[id];
+    if (!meta || !clue) {
       showCaption("No encuentras eso. Prueba reloj, estatua o antorcha.");
       showToast("Objeto no encontrado · reloj / estatua / antorcha");
       return;
     }
-    if (state.clues[clue.key]) {
-      addMessage({ user: "Sistema", text: `${user} volvió a mirar ${objectName}. La pista ya está en el tablero.`, system: true });
-      showCaption(`Pista ya descubierta: ${clue.label} = ${clue.digit}.`);
+    if (state.clues[id]) {
+      addMessage({ user: "Sistema", text: `${user} volvió a mirar ${id}. La pista ya está en el tablero.`, system: true });
+      showCaption(`Pista ya descubierta: ${meta.label} = ${clue.digit}.`);
       return;
     }
-    state.clues[clue.key] = true;
-    $(clue.display).textContent = clue.status;
-    $(`clue${clue.key[0].toUpperCase()}${clue.key.slice(1)}`).classList.add("found");
-    $(clue.slot).classList.add("active");
-    $(clue.slot).querySelector("i").textContent = clue.digit;
-    const clueCount = Object.keys(state.clues).length;
-    $("clueCount").textContent = String(clueCount);
-    $("lockDisplay").textContent = Object.keys(clueData).map((key) => {
-      const item = clueData[key];
-      return state.clues[item.key] ? item.digit : "•";
-    }).join(" ");
-    addMessage({ user: "Sistema", text: `${user} descubrió una pista: ${clue.label} = ${clue.digit}.`, system: true, good: true });
-    addMessage({ user, color: "gold", text: `!examinar ${objectName}`, command: true, good: true });
+    state.clues[id] = true;
+    $(meta.display).textContent = `${meta.label} · ${clue.digit}`;
+    $(meta.card).classList.add("found");
+    $(meta.slot).classList.add("active");
+    $(meta.slot).querySelector("i").textContent = clue.digit;
+    const count = Object.keys(state.clues).length;
+    $("clueCount").textContent = String(count);
+    $("lockDisplay").textContent = ["reloj", "estatua", "antorcha"].map((key) => state.clues[key] ? state.room.clues[key].digit : "•").join(" ");
+    addMessage({ user: "Sistema", text: `${user} descubrió una pista: ${meta.label} = ${clue.digit}.`, system: true, good: true });
     showCaption(clue.caption);
-    showEvent(`Pista encontrada · ${clue.label} = ${clue.digit}`);
-    updateEnergy(16);
-    if (clueCount === 3) {
+    showEvent(`Pista encontrada · ${meta.label} = ${clue.digit}`);
+    rewardUser(user, 16, 0);
+    requestCaster("clue");
+    if (count === 3) {
+      const code = getCode();
       $("slotCode").classList.add("active");
-      $("slotCode").querySelector("i").textContent = "2 4 1";
-      $("sceneHint").textContent = "¡Código completo! Escríbanlo para abrir la bóveda: !codigo 241";
-      showToast("Todas las pistas reunidas · el código es 241");
-      setCaster("Tres pistas. El chat ya resolvió el misterio; ahora falta que alguien escriba los números en orden.");
-    } else {
-      setCaster(randomLine("inspect"));
+      $("slotCode").querySelector("i").textContent = code.split("").join(" ");
+      $("sceneHint").textContent = `¡Código completo! Escríbanlo para abrir la bóveda: !codigo ${code}`;
+      $("chatBannerText").innerHTML = `¡Las 3 pistas están listas! Prueben <b>!codigo ${escapeHTML(code)}</b> para abrir la bóveda.`;
+      showToast(`Todas las pistas reunidas · código ${code}`);
     }
   }
 
-  function openVault(user) {
+  function openVault(user, source = "demo") {
     if (state.opened) {
       addMessage({ user: "Sistema", text: "La bóveda ya está abierta. El chat se ganó su momento de gloria.", system: true });
       return;
     }
     const found = Object.keys(state.clues).length;
     if (found < 3) {
-      addMessage({ user, color: "coral", text: "!codigo 241", command: true });
       addMessage({ user: "Sistema", text: `Faltan ${3 - found} pista${3 - found === 1 ? "" : "s"}. Examinen los objetos antes de probar el código.`, system: true });
       showCaption("La bóveda no cede. Primero hay que descubrir las tres pistas.");
-      setCaster(randomLine("wrong"));
-      updateEnergy(5);
+      requestCaster("wrong");
+      rewardUser(user, 3, 7000);
       return;
     }
     state.opened = true;
     $("scene").classList.add("open");
-    $("lockDisplay").textContent = "2 4 1";
+    $("lockDisplay").textContent = getCode().split("").join(" ");
     $("successOverlay").classList.add("visible");
     $("sceneHint").textContent = "La bóveda se abrió. ¡El equipo completó la misión!";
-    addMessage({ user, color: "blue", text: "!codigo 241", command: true, good: true });
+    $("chatBannerText").innerHTML = "¡El equipo escapó! Pulsa ↻ para comenzar una nueva ronda.";
     addMessage({ user: "Sistema", text: `${user} encontró el código. ¡La bóveda se abre!`, system: true, good: true });
     showEvent("¡BÓVEDA ABIERTA! · MISIÓN COMPLETADA");
-    setCaster(openingLines[Math.floor(Math.random() * openingLines.length)]);
+    requestCaster("open");
     $("slotCode").classList.add("active");
     $("slotCode").querySelector("i").textContent = "✓";
   }
 
-  function processCommand(text, user) {
-    const cleaned = text.trim();
-    const match = cleaned.match(/^!(\S+)(?:\s+(.+))?$/i);
-    if (!match) {
-      addMessage({ user, color: users.find((entry) => entry.name === user)?.color || "", text: cleaned });
-      if (/\b(f|jaj|xd|lol|gg)\b/i.test(cleaned) && state.effects) setCaster("El chat ya está celebrando. La bóveda sigue cerrada, pero el ánimo está por las nubes.", false);
+  function switchPreset(name, user) {
+    const aliases = { neon: "neon", neón: "neon", ambar: "ambar", ámbar: "ambar", bruma: "bruma" };
+    const preset = aliases[name.toLocaleLowerCase("es")];
+    if (!preset) {
+      showCaption("Estilos disponibles: neon, ambar o bruma.");
       return;
     }
-    const command = match[1].toLowerCase();
+    const scene = $("scene");
+    scene.classList.remove("preset-neon", "preset-ambar", "preset-bruma");
+    scene.classList.add(`preset-${preset}`);
+    state.currentPreset = preset;
+    const names = { neon: "neón", ambar: "ámbar", bruma: "bruma submarina" };
+    showEvent(`${user} cambió el ambiente · ${names[preset]}`);
+    showToast(`El chat cambió el ambiente a ${names[preset]}`);
+    rewardUser(user, 7, 6000);
+  }
+
+  function processCommand(text, user, source = "demo") {
+    const cleaned = String(text).trim().slice(0, 180);
+    if (!cleaned) return;
+    const match = cleaned.match(/^!(\S+)(?:\s+(.+))?$/i);
+    const color = users.find((entry) => entry.name.toLowerCase() === String(user).toLowerCase())?.color || (source === "twitch" ? "blue" : "gold");
+    addMessage({ user, color, text: cleaned, command: Boolean(match), source });
+    if (!match) {
+      rewardUser(user, 2, 7000);
+      if (/\b(f|jaj|xd|lol|gg)\b/i.test(cleaned) && state.effects) requestCaster("chat");
+      return;
+    }
+    const command = match[1].toLocaleLowerCase("es");
     const args = (match[2] || "").trim();
     if (command === "examinar" || command === "mirar") {
-      if (!args) {
-        addMessage({ user, color: "gold", text: cleaned, command: true });
-        addMessage({ user: "Sistema", text: "Indica un objeto: reloj, estatua o antorcha.", system: true });
-        return;
-      }
-      revealClue(args.toLowerCase().replace(/[.!?]+$/, ""), user);
+      if (!args) addMessage({ user: "Sistema", text: "Indica un objeto: reloj, estatua o antorcha.", system: true });
+      else revealClue(args, user, source);
       return;
     }
     if (command === "codigo" || command === "código") {
-      if (args.replace(/\s/g, "") === "241") openVault(user);
+      if (args.replace(/\s/g, "") === getCode()) openVault(user, source);
       else {
-        addMessage({ user, color: "coral", text: cleaned, command: true });
         addMessage({ user: "Sistema", text: "Ese código no funcionó. Busca las pistas en la sala.", system: true });
         showCaption("La cerradura no reconoce esa combinación.");
-        setCaster(randomLine("wrong"));
-        updateEnergy(4);
+        requestCaster("wrong");
+        rewardUser(user, 3, 7000);
       }
       return;
     }
     if (command === "pista") {
-      addMessage({ user, color: "violet", text: cleaned, command: true });
-      const missing = Object.values(clueData).find((clue) => !state.clues[clue.key]);
-      if (missing) {
-        const suggestions = { reloj: "Una hora exacta se quedó detenida aquí.", estatua: "La respuesta está en los dedos de piedra.", antorcha: "Cuenta las llamas que siguen encendidas." };
-        showCaption(suggestions[Object.keys(clueData).find((key) => clueData[key] === missing)]);
-        setCaster(randomLine("hint"));
-      } else showCaption("Ya tienen todas las pistas. ¡Prueben el código 241!");
-      updateEnergy(6);
+      if (state.energy < 35) {
+        addMessage({ user: "Sistema", text: `La comunidad necesita ${35 - state.energy} puntos de energía para desbloquear una pista.`, system: true });
+        return;
+      }
+      const missingId = ["reloj", "estatua", "antorcha"].find((id) => !state.clues[id]);
+      if (missingId) {
+        state.energy = Math.max(0, state.energy - 12);
+        $("energyValue").textContent = String(state.energy);
+        $("energyFill").style.width = `${state.energy}%`;
+        showCaption(state.room.clues[missingId].hint);
+        addMessage({ user: "Sistema", text: `El equipo desbloqueó una pista para ${missingId}.`, system: true, highlight: true });
+        requestCaster("hint");
+      } else showCaption(`Ya tienen todas las pistas. ¡Prueben !codigo ${getCode()}!`);
+      return;
+    }
+    if (command === "estilo") {
+      switchPreset(args || "", user);
+      return;
+    }
+    if (command === "tema") {
+      const theme = args.replace(/[<>\u0000-\u001f]/g, " ").trim().slice(0, 64);
+      if (!theme) {
+        addMessage({ user: "Sistema", text: "Sugiere un tema: !tema una estación espacial abandonada. El streamer decide si crea esa sala.", system: true });
+        return;
+      }
+      $("themeInput").value = theme;
+      addMessage({ user: "Sistema", text: `${user} propuso el tema «${theme}». El streamer puede revisarlo y crear la sala.`, system: true, good: true });
+      showEvent(`${user} propuso una nueva sala`);
+      return;
+    }
+    if (command === "reacciona") {
+      requestCaster("chat");
+      showEvent(`${user} pidió una reacción de Mimo`);
       return;
     }
     if (command === "ayuda" || command === "help") {
-      addMessage({ user, color: "blue", text: cleaned, command: true });
-      addMessage({ user: "Sistema", text: "Comandos: !examinar reloj / estatua / antorcha · !pista · !codigo 241", system: true });
-      showToast("Comandos mostrados en el chat");
+      addMessage({ user: "Sistema", text: "Comandos: !examinar reloj/estatua/antorcha · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !estilo neon/ambar/bruma · !reacciona", system: true });
       return;
     }
     if (command === "votar") {
-      addMessage({ user, color: "gold", text: cleaned, command: true });
-      updateEnergy(5);
-      showEvent(`${user} se unió al esfuerzo del equipo`);
+      const aliases = { neon: "neon", neón: "neon", ambar: "ambar", ámbar: "ambar", bruma: "bruma" };
+      const choice = aliases[args.toLocaleLowerCase("es")];
+      if (!choice) {
+        addMessage({ user: "Sistema", text: "Vota por un efecto visual: !votar neon, !votar ambar o !votar bruma.", system: true });
+        return;
+      }
+      state.styleVotes.set(String(user).toLocaleLowerCase("es"), choice);
+      rewardUser(user, 3, 6000);
+      const tally = [...state.styleVotes.values()].reduce((counts, vote) => ({ ...counts, [vote]: (counts[vote] || 0) + 1 }), {});
+      const labels = { neon: "neón", ambar: "ámbar", bruma: "bruma" };
+      const leader = Object.entries(tally).sort((a, b) => b[1] - a[1])[0];
+      showEvent(`Voto registrado · ${labels[choice]} · ${state.styleVotes.size} participantes`);
+      if (state.styleVotes.size >= 3 && leader && leader[1] > (Object.values(tally).sort((a, b) => b - a)[1] || 0)) {
+        switchPreset(leader[0], "La comunidad");
+        state.styleVotes.clear();
+        addMessage({ user: "Sistema", text: `La votación eligió el estilo ${labels[leader[0]]}. ¡El chat cambió la escena!`, system: true, good: true });
+      }
       return;
     }
-    addMessage({ user, color: "coral", text: cleaned, command: true });
     addMessage({ user: "Sistema", text: `Comando !${escapeHTML(command)} desconocido. Prueba !ayuda.`, system: true });
+  }
+
+  function applyRoom(room, note = null) {
+    if (!room || !room.clues) return;
+    const roomKey = `${room.title}|${room.code}|${room.opening}`;
+    if (roomKey === state.lastRoomKey) return;
+    state.lastRoomKey = roomKey;
+    state.room = room;
+    const environments = ["underwater", "space", "haunted", "jungle"];
+    const scene = $("scene");
+    scene.classList.remove(...environments.map((environment) => `environment-${environment}`));
+    scene.classList.add(`environment-${environments.includes(room.environment) ? room.environment : "underwater"}`);
+    $("streamHeadingTitle").textContent = room.title;
+    $("roomLabelText").textContent = room.title.toLocaleUpperCase("es").slice(0, 30);
+    $("sceneCaption").lastElementChild.textContent = room.opening;
+    $("sceneHint").textContent = "La sala está lista. Examinen objetos y trabajen en equipo para escapar.";
+    $("chatBannerText").innerHTML = `El equipo necesita <b>3 pistas</b> para abrir la bóveda.`;
+    $("aiStatus").classList.toggle("ready", room.source === "openai");
+    if (note) showToast(note);
+    resetGame(false);
+    showCaption(room.opening);
+    showEvent(room.source === "openai" ? "Nueva sala generada con IA" : "Nueva sala lista para jugar");
+  }
+
+  function resetGame(showMessage = true) {
+    state.clues = {};
+    state.energy = 12;
+    state.opened = false;
+    state.styleVotes.clear();
+    $("scene").classList.remove("open", "energy-35", "energy-65", "energy-90");
+    $("successOverlay").classList.remove("visible");
+    $("sceneHint").textContent = "Pista colectiva: examina los objetos para reunir el código.";
+    $("clueCount").textContent = "0";
+    $("energyValue").textContent = "12";
+    $("energyFill").style.width = "12%";
+    $("nextUnlock").textContent = "Siguiente efecto · 35%";
+    $("lockDisplay").textContent = "● ● ●";
+    Object.values(objectMeta).forEach((meta) => {
+      $(meta.display).textContent = "SIN EXAMINAR";
+      $(meta.card).classList.remove("found");
+      $(meta.slot).classList.remove("active");
+      $(meta.slot).querySelector("i").textContent = "?";
+      $(meta.slot).querySelector("span").textContent = meta.label;
+    });
+    $("slotCode").classList.remove("active");
+    $("slotCode").querySelector("i").textContent = "•••";
+    $("chatBannerText").innerHTML = "El equipo necesita <b>3 pistas</b> para abrir la bóveda.";
+    if (showMessage) {
+      addMessage({ user: "Sistema", text: "Nueva ronda iniciada. Chat, la sala está lista.", system: true });
+      setCaster("Nueva sala, misma oportunidad para que el chat salve al streamer.", false);
+      showToast("Ronda reiniciada · vuelvan a investigar");
+    }
+  }
+
+  async function createRoom(theme) {
+    const prompt = String(theme || "").trim();
+    if (!prompt) return showToast("Escribe un tema para la sala.");
+    const button = $("generateButton");
+    button.disabled = true;
+    button.textContent = "GENERANDO…";
+    $("aiStatus").classList.add("busy");
+    try {
+      if (state.serverAvailable) {
+        const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt }) });
+        applyRoom(result.room, result.note);
+        requestCaster("room");
+      } else {
+        const room = structuredClone(fallbackRoom);
+        room.theme = prompt.slice(0, 64);
+        room.title = `${prompt.charAt(0).toLocaleUpperCase("es")}${prompt.slice(1, 43)}: la Cámara Sellada`;
+        room.opening = `Una cámara sellada esconde el secreto de ${room.theme}. El chat debe reunir tres cifras y escapar en equipo.`;
+        const lowerTheme = prompt.toLocaleLowerCase("es");
+        room.environment = /espaci|planeta|nave|luna|galax|astronaut|órbita|orbita/.test(lowerTheme) ? "space" : /bosque|jungla|selva|templo|isla|jardín|jardin/.test(lowerTheme) ? "jungle" : /fantasma|embruj|castillo|cripta|vampir|terror/.test(lowerTheme) ? "haunted" : "underwater";
+        room.source = "plantilla";
+        applyRoom(room, "Servidor no iniciado · se usó una sala de respaldo.");
+        requestCaster("room");
+      }
+      $("themeInput").value = "";
+    } catch (error) {
+      showToast(error.message || "No se pudo crear la sala.");
+    } finally {
+      button.disabled = false;
+      button.innerHTML = "CREAR SALA <span>↗</span>";
+      $("aiStatus").classList.remove("busy");
+    }
+  }
+
+  function setTwitchStatus(payload) {
+    if (!payload?.twitch) return;
+    state.twitchConfigured = payload.twitch.configured;
+    state.twitchStatus = payload.twitch.status;
+    state.aiEnabled = Boolean(payload.ai?.enabled);
+    const chip = $("connectionState");
+    chip.classList.remove("connected", "connecting", "waiting", "error");
+    const status = state.twitchStatus;
+    const connected = status === "connected";
+    if (connected) {
+      chip.classList.add("connected");
+      $("connectionLabel").textContent = `TWITCH · ${payload.twitch.login || "CONECTADO"}`;
+      $("connectButton").textContent = "DESCONECTAR";
+      $("streamState").textContent = "CHAT DE TWITCH";
+      $("chatModeLabel").textContent = "TWITCH EN VIVO";
+      $("chatInput").placeholder = "Simula un comando local...";
+      $("chatBannerText").setAttribute("aria-live", "polite");
+    } else {
+      if (["connecting", "reconnecting"].includes(status)) chip.classList.add("connecting");
+      else if (status === "waiting_for_authorization") chip.classList.add("waiting");
+      else if (status === "error") chip.classList.add("error");
+      $("connectionLabel").textContent = status === "waiting_for_authorization" ? "AUTORIZA TWITCH" : status === "connecting" ? "CONECTANDO…" : status === "reconnecting" ? "RECONECTANDO…" : "MODO DEMO";
+      $("connectButton").innerHTML = "CONECTAR TWITCH <span>↗</span>";
+      $("streamState").textContent = "MODO DEMO";
+      $("chatModeLabel").textContent = "SIMULACIÓN";
+      $("chatInput").placeholder = "Escribe un comando...";
+    }
+    const ai = $("aiStatus");
+    ai.classList.toggle("ready", state.aiEnabled);
+    ai.innerHTML = `<span class="ai-indicator"></span>${state.aiEnabled ? `IA ACTIVA · ${escapeHTML(payload.ai.model)}` : "IA · PLANTILLA"}`;
+  }
+
+  function connectEvents() {
+    if (typeof EventSource !== "function") return;
+    try {
+      state.eventSource = new EventSource("/api/events");
+      state.eventSource.addEventListener("status", (event) => {
+        try { setTwitchStatus(JSON.parse(event.data)); } catch {}
+      });
+      state.eventSource.addEventListener("chat-message", (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          processCommand(message.text, message.user || message.login || "chat", "twitch");
+        } catch {}
+      });
+      state.eventSource.addEventListener("room-generated", (event) => {
+        try { const result = JSON.parse(event.data); applyRoom(result.room, result.note); } catch {}
+      });
+      state.eventSource.addEventListener("caster-line", (event) => {
+        try { const result = JSON.parse(event.data); setCaster(result.line); } catch {}
+      });
+      state.eventSource.onopen = () => { state.serverAvailable = true; };
+      state.eventSource.onerror = () => { state.serverAvailable = false; };
+    } catch { state.serverAvailable = false; }
+  }
+
+  async function checkServer() {
+    try {
+      const status = await api("/api/status");
+      state.serverAvailable = true;
+      setTwitchStatus(status);
+    } catch { state.serverAvailable = false; }
+  }
+
+  function openTwitchModal() {
+    $("twitchModal").hidden = false;
+    $("deviceCodeBox").hidden = true;
+    $("twitchDialogStatus").classList.remove("error");
+    if (!state.twitchConfigured) {
+      $("twitchDialogTitle").textContent = "Falta configurar Twitch";
+      $("twitchDialogCopy").textContent = "Copia TWITCH_CLIENT_ID de tu aplicación registrada en Twitch a .env y reinicia el servidor local.";
+      $("twitchDialogStatus").textContent = "El modo demo sigue disponible mientras conectas la aplicación.";
+      return;
+    }
+    $("twitchDialogTitle").textContent = "Autoriza tu canal";
+    $("twitchDialogCopy").textContent = "Nexo solicitará permiso para leer el chat de Twitch. Mimo aparece como Co-Caster visual en el overlay.";
+    $("twitchDialogStatus").textContent = "Solicitando código seguro de activación…";
+    api("/api/twitch/device", { method: "POST", body: "{}" }).then((device) => {
+      $("deviceCodeBox").hidden = false;
+      $("deviceCode").textContent = device.userCode;
+      $("activateLink").href = device.verificationUri || "https://www.twitch.tv/activate";
+      $("twitchDialogStatus").textContent = "Después de autorizar, Nexo conectará el chat automáticamente.";
+      window.clearInterval(state.devicePoll);
+      state.devicePoll = window.setInterval(pollDeviceStatus, Math.max(4000, (device.interval || 5) * 1000));
+      pollDeviceStatus();
+    }).catch((error) => {
+      $("twitchDialogStatus").classList.add("error");
+      $("twitchDialogStatus").textContent = error.message;
+    });
+  }
+
+  async function pollDeviceStatus() {
+    try {
+      const result = await api("/api/twitch/device/status");
+      setTwitchStatus(result);
+      if (result.status === "authorized" || result.twitch?.status === "connecting") $("twitchDialogStatus").textContent = "Autorización recibida. Conectando con el chat…";
+      if (result.twitch?.status === "connected") {
+        window.clearInterval(state.devicePoll);
+        $("twitchDialogTitle").textContent = "¡Chat conectado!";
+        $("twitchDialogStatus").textContent = `Nexo está leyendo el chat de ${result.twitch.displayName || result.twitch.login}.`;
+        $("deviceCodeBox").hidden = true;
+        $("twitchDialogAction").textContent = "LISTO";
+      }
+      if (["expired", "failed"].includes(result.status) || result.twitch?.status === "error") {
+        window.clearInterval(state.devicePoll);
+        $("twitchDialogStatus").classList.add("error");
+        $("twitchDialogStatus").textContent = result.error || result.detail || "No se pudo completar la conexión.";
+      }
+    } catch (error) {
+      $("twitchDialogStatus").classList.add("error");
+      $("twitchDialogStatus").textContent = error.message;
+    }
+  }
+
+  async function disconnectTwitch() {
+    try { await api("/api/twitch/disconnect", { method: "POST", body: "{}" }); showToast("Chat de Twitch desconectado"); }
+    catch (error) { showToast(error.message); }
   }
 
   function seedChat() {
     initialMessages.forEach((message, index) => {
-      window.setTimeout(() => addMessage({ ...message, user: message.user }), index * 170);
+      window.setTimeout(() => addMessage({ ...message }), index * 170);
     });
-    window.setTimeout(() => {
-      addMessage({ user: "MIMO · CO-CASTER", text: "A ver, equipo. Tres pistas, una puerta y cero presión… bueno, casi.", caster: true });
-    }, initialMessages.length * 170 + 150);
-  }
-
-  function sendMessage(text, user = "tú") {
-    const cleaned = text.trim();
-    if (!cleaned) return;
-    processCommand(cleaned, user);
+    window.setTimeout(() => setCaster("A ver, equipo. Tres pistas, una puerta y cero presión… bueno, casi.", true), initialMessages.length * 170 + 150);
   }
 
   $("chatForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    sendMessage(input.value);
+    if (input.value.trim()) processCommand(input.value, "tú", "demo");
     input.value = "";
     input.focus();
+  });
+  $("roomForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    createRoom($("themeInput").value);
   });
   document.querySelectorAll("[data-command]").forEach((button) => button.addEventListener("click", () => {
     input.value = button.dataset.command;
@@ -268,46 +577,26 @@
     $("scene").classList.toggle("effects-off", !state.effects);
     showToast(state.effects ? "Efectos del chat activados" : "Efectos del chat pausados");
   });
-  $("resetButton").addEventListener("click", resetGame);
-  $("nextRoomButton").addEventListener("click", resetGame);
+  $("connectButton").addEventListener("click", () => state.twitchStatus === "connected" ? disconnectTwitch() : openTwitchModal());
+  $("closeTwitchModal").addEventListener("click", () => { $("twitchModal").hidden = true; });
+  $("twitchDialogAction").addEventListener("click", () => { $("twitchModal").hidden = true; });
+  $("twitchModal").addEventListener("click", (event) => { if (event.target === $("twitchModal")) $("twitchModal").hidden = true; });
+  $("resetButton").addEventListener("click", () => resetGame(true));
+  $("nextRoomButton").addEventListener("click", () => resetGame(true));
   $("fullscreenButton").addEventListener("click", async () => {
-    const target = $("gameFrame");
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
-      else await target.requestFullscreen();
-    } catch {
-      showToast("Pantalla completa no disponible en este navegador");
-    }
+      else await $("gameFrame").requestFullscreen();
+    } catch { showToast("Pantalla completa no disponible en este navegador"); }
   });
 
-  function resetGame() {
-    state.clues = {};
-    state.energy = 12;
-    state.opened = false;
-    $("scene").classList.remove("open", "energy-35", "energy-65", "energy-90");
-    $("successOverlay").classList.remove("visible");
-    $("sceneHint").textContent = "Pista colectiva: examina los objetos para reunir el código.";
-    $("clueCount").textContent = "0";
-    $("energyValue").textContent = "12";
-    $("energyFill").style.width = "12%";
-    $("nextUnlock").textContent = "Siguiente efecto · 35%";
-    $("lockDisplay").textContent = "● ● ●";
-    Object.values(clueData).forEach((clue) => {
-      $(clue.display).textContent = "SIN EXAMINAR";
-      $(`clue${clue.key[0].toUpperCase()}${clue.key.slice(1)}`).classList.remove("found");
-      $(clue.slot).classList.remove("active");
-      $(clue.slot).querySelector("i").textContent = "?";
-    });
-    $("slotCode").classList.remove("active");
-    $("slotCode").querySelector("i").textContent = "•••";
-    chatMessages.innerHTML = "";
-    state.messages = 0;
-    $("momentCount").textContent = "0";
-    addMessage({ user: "Sistema", text: "Nueva partida iniciada. Chat, la bóveda está lista.", system: true });
-    setCaster("Nueva sala, misma oportunidad para que el chat salve al streamer.", false);
-    seedChat();
-    showToast("Sala reiniciada · nueva partida en marcha");
-  }
-
+  const roomHeading = document.querySelector(".stream-heading h1");
+  roomHeading.id = "streamHeadingTitle";
+  roomHeading.textContent = state.room.title;
+  $("roomLabelText").textContent = state.room.title.toLocaleUpperCase("es");
+  $("scene").classList.add("preset-bruma");
+  document.body.classList.toggle("overlay-mode", new URLSearchParams(location.search).get("overlay") === "1");
+  connectEvents();
+  checkServer();
   seedChat();
 })();
