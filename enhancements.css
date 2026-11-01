@@ -100,3 +100,9 @@
 @media(max-width:420px){.scenario-grid{grid-template-columns:1fr}}
 @media(max-width:1050px){.creation-bar{grid-template-columns:minmax(0,1fr);gap:10px}.creation-copy,.creation-options,.scenario-picker,.ai-status{grid-column:1;grid-row:auto}.creation-options{justify-items:stretch}.creation-options .creation-form{grid-column:1;grid-row:auto;width:100%;max-width:none}.room-mode{justify-self:start}.scenario-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.scenario-picker-heading{align-items:flex-start;flex-direction:column;gap:4px}.ai-status{margin:0}}
 @media(max-width:420px){.scenario-grid{grid-template-columns:1fr}.scenario-card-copy strong{font-size:11px}.scenario-card-copy small{font-size:9px}}
+
+/* Keep the chat composer in view while the message feed scrolls inside the panel. */
+.chat-panel{height:calc(100vh - 112px);min-height:420px;max-height:calc(100vh - 112px);position:sticky;top:12px}
+.chat-messages{min-height:0;overscroll-behavior:contain}
+.chat-form,.chat-footer{flex:0 0 auto}
+@media(max-width:760px){.chat-panel{height:min(520px,70vh);min-height:420px;max-height:70vh;position:relative;top:auto;order:2}}
