@@ -263,6 +263,19 @@ const roomSchema = {
   additionalProperties: false,
 };
 
+function geminiCompatibleSchema(schema) {
+  if (Array.isArray(schema)) return schema.map(geminiCompatibleSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const { additionalProperties: _unsupportedByGemini, ...compatible } = schema;
+  if (compatible.properties) {
+    compatible.properties = Object.fromEntries(Object.entries(compatible.properties).map(([key, value]) => [key, geminiCompatibleSchema(value)]));
+  }
+  if (compatible.items) compatible.items = geminiCompatibleSchema(compatible.items);
+  return compatible;
+}
+
+const geminiRoomSchema = geminiCompatibleSchema(roomSchema);
+
 function safeRoomFromModel(room, theme, source = "openai") {
   const environments = new Set(["underwater", "space", "haunted", "jungle"]);
   const normalized = { theme: String(theme).trim().slice(0, 64), title: String(room.title || "Nueva sala").replace(/[<>]/g, "").trim().slice(0, 50), summary: String(room.summary || room.opening || "El chat debe resolver tres acertijos para abrir la bóveda.").replace(/[<>]/g, "").trim().slice(0, 220), opening: String(room.opening || "El chat tiene un nuevo reto.").replace(/[<>]/g, "").trim().slice(0, 180), environment: environments.has(room.environment) ? room.environment : "underwater", clues: {}, source };
@@ -314,7 +327,7 @@ async function generateRoom(theme, mode = "template", templateId = "", provider 
       ? {
           systemInstruction: { parts: [{ text: instructions }] },
           contents: [{ role: "user", parts: [{ text: `Diseña un escape room a partir de esta situación propuesta por el streamer: ${prompt}` }] }],
-          generationConfig: { responseMimeType: "application/json", responseSchema: roomSchema, maxOutputTokens: 1800, temperature: 0.75 },
+          generationConfig: { responseMimeType: "application/json", responseSchema: geminiRoomSchema, maxOutputTokens: 1800, temperature: 0.75 },
         }
       : {
           model,
