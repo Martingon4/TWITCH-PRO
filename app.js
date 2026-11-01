@@ -254,6 +254,46 @@
     rewardUser(user, 7, 6000);
   }
 
+  function applyRewardHint(user) {
+    if (state.opened) return showCaption("La bóveda ya se abrió; guarda tus puntos para la próxima sala.");
+    const missingId = ["reloj", "estatua", "antorcha"].find((id) => !state.clues[id]);
+    if (!missingId) return showCaption(`El equipo ya encontró todas las pistas. Código: ${getCode()}.`);
+    const clue = state.room.clues[missingId];
+    showCaption(clue.hint);
+    addMessage({ user: "Sistema", text: `${user} canjeó una recompensa: Mimo dio una pista sobre ${missingId}.`, system: true, highlight: true });
+    showEvent(`${user} canjeó una pista de canal`);
+    requestCaster("hint");
+  }
+
+  function handleChannelReward(redemption, source = "twitch") {
+    const user = String(redemption.user || "chat").slice(0, 32);
+    const title = String(redemption.title || "Recompensa").slice(0, 45);
+    const inputText = String(redemption.userInput || "").replace(/[<>\u0000-\u001f]/g, " ").trim().slice(0, 64);
+    const points = Number(redemption.points) || 0;
+    addMessage({ user, color: "gold", text: `canjeó ${title}${points ? ` · ${points} puntos` : ""}`, source, highlight: true });
+    const match = title.match(/^nexo\s*[·:|\-]\s*(pista|estilo|tema|mimo)$/i);
+    const action = match?.[1]?.toLocaleLowerCase("es");
+    if (!action) {
+      showEvent(`${user} canjeó ${title}`);
+      return;
+    }
+    if (action === "pista") {
+      applyRewardHint(user);
+    } else if (action === "estilo") {
+      const allowed = new Set(["neon", "neón", "ambar", "ámbar", "bruma"]);
+      if (allowed.has(inputText.toLocaleLowerCase("es"))) switchPreset(inputText, user);
+      else showCaption("Para Nexo · Estilo, configura el mensaje del canje para pedir neon, ambar o bruma.");
+    } else if (action === "tema") {
+      if (!inputText) return showCaption("Configura Nexo · Tema para pedir una idea en el mensaje de canje.");
+      $("themeInput").value = inputText;
+      addMessage({ user: "Sistema", text: `${user} propuso «${inputText}» con puntos del canal. El streamer revisa la idea antes de crearla.`, system: true, good: true });
+      showEvent(`${user} propuso una sala con puntos`);
+    } else {
+      showEvent(`${user} pidió una reacción de Mimo con puntos`);
+      requestCaster("chat");
+    }
+  }
+
   function processCommand(text, user, source = "demo") {
     const cleaned = String(text).trim().slice(0, 180);
     if (!cleaned) return;
@@ -267,6 +307,17 @@
     }
     const command = match[1].toLocaleLowerCase("es");
     const args = (match[2] || "").trim();
+    if (command === "canje" && source === "demo") {
+      const [kind = "", ...rest] = args.split(/\s+/);
+      const aliases = { pista: "Pista", estilo: "Estilo", tema: "Tema", mimo: "Mimo" };
+      const title = aliases[kind.toLocaleLowerCase("es")];
+      if (!title) {
+        addMessage({ user: "Sistema", text: "Simula un canje: !canje pista · !canje estilo neon · !canje tema bosque · !canje mimo.", system: true });
+      } else {
+        handleChannelReward({ user, title: `Nexo · ${title}`, userInput: rest.join(" "), points: 0 }, "demo");
+      }
+      return;
+    }
     if (command === "examinar" || command === "mirar") {
       if (!args) addMessage({ user: "Sistema", text: "Indica un objeto: reloj, estatua o antorcha.", system: true });
       else revealClue(args, user, source);
@@ -319,7 +370,7 @@
       return;
     }
     if (command === "ayuda" || command === "help") {
-      addMessage({ user: "Sistema", text: "Comandos: !examinar reloj/estatua/antorcha · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !estilo neon/ambar/bruma · !reacciona", system: true });
+      addMessage({ user: "Sistema", text: "Comandos: !examinar reloj/estatua/antorcha · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !estilo neon/ambar/bruma · !reacciona · demo: !canje pista/estilo/tema/mimo", system: true });
       return;
     }
     if (command === "votar") {
@@ -443,10 +494,11 @@
       chip.classList.add("connected");
       $("connectionLabel").textContent = `TWITCH · ${payload.twitch.login || "CONECTADO"}`;
       $("connectButton").textContent = "DESCONECTAR";
-      $("streamState").textContent = "CHAT DE TWITCH";
-      $("chatModeLabel").textContent = "TWITCH EN VIVO";
+      $("streamState").textContent = payload.twitch.rewardsAvailable ? "CHAT + PUNTOS" : "CHAT DE TWITCH";
+      $("chatModeLabel").textContent = payload.twitch.rewardsAvailable ? "TWITCH · CHAT + PUNTOS" : "TWITCH EN VIVO";
       $("chatInput").placeholder = "Simula un comando local...";
       $("chatBannerText").setAttribute("aria-live", "polite");
+      if (payload.twitch.rewardsError) showToast("Chat conectado; Twitch no habilitó los canjes de puntos.");
     } else {
       if (["connecting", "reconnecting"].includes(status)) chip.classList.add("connecting");
       else if (status === "waiting_for_authorization") chip.classList.add("waiting");
@@ -474,6 +526,9 @@
           const message = JSON.parse(event.data);
           processCommand(message.text, message.user || message.login || "chat", "twitch");
         } catch {}
+      });
+      state.eventSource.addEventListener("channel-reward", (event) => {
+        try { handleChannelReward(JSON.parse(event.data)); } catch {}
       });
       state.eventSource.addEventListener("room-generated", (event) => {
         try { const result = JSON.parse(event.data); applyRoom(result.room, result.note); } catch {}
@@ -505,13 +560,13 @@
       return;
     }
     $("twitchDialogTitle").textContent = "Autoriza tu canal";
-    $("twitchDialogCopy").textContent = "Nexo solicitará permiso para leer el chat de Twitch. Mimo aparece como Co-Caster visual en el overlay.";
+    $("twitchDialogCopy").textContent = "Nexo solicitará permiso para leer el chat y los canjes de puntos de Twitch. Mimo aparece como Co-Caster visual en el overlay.";
     $("twitchDialogStatus").textContent = "Solicitando código seguro de activación…";
     api("/api/twitch/device", { method: "POST", body: "{}" }).then((device) => {
       $("deviceCodeBox").hidden = false;
       $("deviceCode").textContent = device.userCode;
       $("activateLink").href = device.verificationUri || "https://www.twitch.tv/activate";
-      $("twitchDialogStatus").textContent = "Después de autorizar, Nexo conectará el chat automáticamente.";
+      $("twitchDialogStatus").textContent = "Después de autorizar, Nexo conectará el chat y los canjes de puntos si tu canal los tiene habilitados.";
       window.clearInterval(state.devicePoll);
       state.devicePoll = window.setInterval(pollDeviceStatus, Math.max(4000, (device.interval || 5) * 1000));
       pollDeviceStatus();
@@ -529,7 +584,7 @@
       if (result.twitch?.status === "connected") {
         window.clearInterval(state.devicePoll);
         $("twitchDialogTitle").textContent = "¡Chat conectado!";
-        $("twitchDialogStatus").textContent = `Nexo está leyendo el chat de ${result.twitch.displayName || result.twitch.login}.`;
+        $("twitchDialogStatus").textContent = result.twitch.rewardsAvailable ? `Chat y canjes de ${result.twitch.displayName || result.twitch.login} conectados.` : `Chat de ${result.twitch.displayName || result.twitch.login} conectado. Los canjes de puntos no están disponibles.`;
         $("deviceCodeBox").hidden = true;
         $("twitchDialogAction").textContent = "LISTO";
       }

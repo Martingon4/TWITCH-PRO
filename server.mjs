@@ -10,7 +10,7 @@ loadEnvironment();
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || "127.0.0.1";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const TWITCH_SCOPES = ["user:read:chat"];
+const TWITCH_SCOPES = ["user:read:chat", "channel:read:redemptions"];
 const EVENTSUB_URL = "wss://eventsub.wss.twitch.tv/ws";
 const staticFiles = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
@@ -22,7 +22,7 @@ const staticFiles = new Map([
 const eventClients = new Set();
 const seenEventIds = new Set();
 let deviceFlow = null;
-let twitch = { status: "disconnected", user: null, accessToken: null, refreshToken: null, socket: null, reconnectTimer: null };
+let twitch = { status: "disconnected", user: null, accessToken: null, refreshToken: null, socket: null, reconnectTimer: null, rewardsAvailable: false, rewardsError: null };
 let casterLastRequestAt = 0;
 
 function loadEnvironment() {
@@ -47,7 +47,7 @@ function json(res, status, payload) {
 function publicStatus() {
   return {
     ai: { enabled: Boolean(process.env.OPENAI_API_KEY), model: process.env.OPENAI_API_KEY ? OPENAI_MODEL : null },
-    twitch: { configured: Boolean(process.env.TWITCH_CLIENT_ID), status: twitch.status, login: twitch.user?.login || null, displayName: twitch.user?.display_name || null },
+    twitch: { configured: Boolean(process.env.TWITCH_CLIENT_ID), status: twitch.status, login: twitch.user?.login || null, displayName: twitch.user?.display_name || null, rewardsAvailable: twitch.rewardsAvailable, rewardsError: twitch.rewardsError },
   };
 }
 
@@ -256,13 +256,26 @@ function twitchHeaders(accessToken) {
   return { "client-id": process.env.TWITCH_CLIENT_ID, authorization: `Bearer ${accessToken}`, "content-type": "application/json" };
 }
 
-async function subscribeToChat(sessionId) {
+async function createEventSubSubscription(sessionId, type, version, condition) {
   const response = await fetchJson("https://api.twitch.tv/helix/eventsub/subscriptions", {
     method: "POST",
     headers: twitchHeaders(twitch.accessToken),
-    body: JSON.stringify({ type: "channel.chat.message", version: "1", condition: { broadcaster_user_id: twitch.user.id, user_id: twitch.user.id }, transport: { method: "websocket", session_id: sessionId } }),
+    body: JSON.stringify({ type, version, condition, transport: { method: "websocket", session_id: sessionId } }),
   });
   return response.data?.[0]?.id || null;
+}
+
+async function subscribeToEvents(sessionId) {
+  await createEventSubSubscription(sessionId, "channel.chat.message", "1", { broadcaster_user_id: twitch.user.id, user_id: twitch.user.id });
+  try {
+    await createEventSubSubscription(sessionId, "channel.channel_points_custom_reward_redemption.add", "1", { broadcaster_user_id: twitch.user.id });
+    twitch.rewardsAvailable = true;
+    twitch.rewardsError = null;
+  } catch (error) {
+    twitch.rewardsAvailable = false;
+    twitch.rewardsError = error.message;
+  }
+  updateTwitchStatus("connected", twitch.rewardsError ? `Chat conectado; canjes no disponibles: ${twitch.rewardsError}` : null);
 }
 
 function rememberEvent(id) {
@@ -278,9 +291,8 @@ function handleEventSubMessage(socket, raw) {
   try { message = JSON.parse(String(raw)); } catch { return; }
   const type = message.metadata?.message_type;
   if (type === "session_welcome") {
-    subscribeToChat(message.payload.session.id).then(() => {
+    subscribeToEvents(message.payload.session.id).then(() => {
       twitch.socket = socket;
-      updateTwitchStatus("connected");
     }).catch((error) => updateTwitchStatus("error", `No se pudo suscribir al chat: ${error.message}`));
   } else if (type === "session_reconnect") {
     const nextSocket = new WebSocket(message.payload.session.reconnect_url);
@@ -303,6 +315,18 @@ function handleEventSubMessage(socket, raw) {
     const event = message.payload?.event;
     if (!event?.message?.text) return;
     broadcast("chat-message", { user: event.chatter_user_name || event.chatter_user_login || "chat", login: event.chatter_user_login || "chat", userId: event.chatter_user_id || null, text: event.message.text, messageId: message.metadata.message_id, source: "twitch", sentAt: event.message?.sent_at || null });
+  } else if (type === "notification" && message.metadata?.subscription_type === "channel.channel_points_custom_reward_redemption.add") {
+    if (!rememberEvent(message.metadata.message_id)) return;
+    const event = message.payload?.event;
+    if (!event?.reward?.title) return;
+    broadcast("channel-reward", {
+      user: String(event.user_name || event.user_login || "chat").slice(0, 32),
+      title: String(event.reward.title).slice(0, 45),
+      userInput: String(event.user_input || "").replace(/[<>\u0000-\u001f]/g, " ").slice(0, 100),
+      points: Number(event.reward.cost) || 0,
+      redemptionId: event.id || message.metadata.message_id,
+      redeemedAt: event.redeemed_at || null,
+    });
   } else if (type === "revocation") {
     updateTwitchStatus("error", `Twitch revocó la suscripción: ${message.payload?.subscription?.status || "desconocido"}.`);
   }
@@ -334,7 +358,7 @@ function disconnectTwitch() {
   if (twitch.reconnectTimer) clearTimeout(twitch.reconnectTimer);
   twitch.reconnectTimer = null;
   const socket = twitch.socket;
-  twitch = { status: "disconnected", user: null, accessToken: null, refreshToken: null, socket: null, reconnectTimer: null };
+  twitch = { status: "disconnected", user: null, accessToken: null, refreshToken: null, socket: null, reconnectTimer: null, rewardsAvailable: false, rewardsError: null };
   if (socket) socket.close();
   deviceFlow = null;
   updateTwitchStatus("disconnected");
