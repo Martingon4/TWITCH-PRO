@@ -48,7 +48,7 @@
   ];
   const casterLines = {
     inspect: ["Una pista más. El chat está haciendo el trabajo de detective que nadie le pidió al streamer.", "¡Buen ojo! A este ritmo, la sala se queda sin secretos antes que el canal sin teorías."],
-    wrong: ["Ese código no abrió nada. La puerta juzga en silencio, yo no tanto.", "Casi… si la bóveda tuviera sentimientos, ahora estaría un poco decepcionada."],
+    wrong: ["Esa respuesta no encaja con el acertijo. La puerta juzga en silencio; yo no tanto.", "Casi… el acertijo sigue sin resolverse, pero la bóveda no se va a ningún lado."],
     progress: ["La energía sube. ¿Quién diría que escribir en mayúsculas servía para algo?", "¡Efecto desbloqueado! El chat acaba de mejorar la iluminación. El presupuesto era imaginario."],
     hint: ["Pista para el equipo: miren los detalles que parecen demasiado obvios.", "No es por presionar, pero hay una estatua que lleva rato esperando atención."],
     room: ["Nueva sala, nuevo misterio y el chat ya viene con teorías de sobra.", "Una habitación recién salida del generador. Mimo recomienda mirar antes de tocar."],
@@ -238,7 +238,7 @@
     return String(value || "").toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   }
 
-  function resolveObjectId(rawName) {
+  function answerMatchesClue(answer, clue) { const submitted = normalizeAnswer(answer); const expected = normalizeAnswer(clue.answer); if (submitted === expected) return true; const fullNumber = String(answer || "").trim(); const lockDigit = String(clue.answer || "").trim(); const asksForDigit = /\b(cifra|unidad(?:es)?|d[ií]gito)\b/i.test(String(clue.riddle || "")); return asksForDigit && /^\d{2,}$/.test(fullNumber) && /^\d$/.test(lockDigit) && fullNumber.at(-1) === lockDigit; } function resolveObjectId(rawName) {
     const name = normalizeAnswer(String(rawName || "").replace(/[.!?]+$/, ""));
     return ["reloj", "estatua", "antorcha"].find((id) => {
       const clue = state.room.clues[id];
@@ -319,8 +319,8 @@
     if (state.clues[id]) return showCaption(`${clue.name} ya está resuelto; la cifra es ${clue.digit}.`);
     const answer = answerParts.join(" ");
     if (!answer) return showCaption(`Escribe tu solución: !resolver ${id} [respuesta].`);
-    if (normalizeAnswer(answer) !== normalizeAnswer(clue.answer)) {
-      addMessage({ user: "Sistema", text: `${user} probó una respuesta para ${clue.name}, pero el mecanismo no reaccionó.`, system: true });
+    if (!answerMatchesClue(answer, clue)) {
+      addMessage({ user: "Sistema", text: `La respuesta de ${user} no coincide con el acertijo de ${clue.name}.`, system: true });
       showCaption("Esa respuesta no encaja. Revisen los datos o pidan !pista.");
       requestCaster("wrong");
       rewardUser(user, 2, 7000);
