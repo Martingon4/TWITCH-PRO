@@ -27,6 +27,7 @@ const staticFiles = new Map([
   ["/three.module.js", ["node_modules/three/build/three.module.js", "text/javascript; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/enhancements.css", ["enhancements.css", "text/css; charset=utf-8"]],
+  ["/ux-refresh.css", ["ux-refresh.css", "text/css; charset=utf-8"]],
 ]);
 const eventClients = new Set();
 const seenEventIds = new Set();

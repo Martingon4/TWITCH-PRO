@@ -880,6 +880,7 @@
   $("effectsButton").addEventListener("click", () => {
     state.effects = !state.effects;
     $("effectsButton").classList.toggle("off", !state.effects);
+    $("effectsButton").setAttribute("aria-pressed", String(state.effects));
     $("effectsButton").querySelector(".toggle-on").textContent = state.effects ? "ON" : "OFF";
     $("scene").classList.toggle("effects-off", !state.effects);
     showToast(state.effects ? "Efectos del chat activados" : "Efectos del chat pausados");
@@ -895,6 +896,12 @@
       if (document.fullscreenElement) await document.exitFullscreen();
       else await $("gameFrame").requestFullscreen();
     } catch { showToast("Pantalla completa no disponible en este navegador"); }
+  });
+  document.addEventListener("fullscreenchange", () => {
+    const active = document.fullscreenElement === $("gameFrame");
+    const label = active ? "Salir de pantalla completa" : "Activar pantalla completa";
+    $("fullscreenButton").setAttribute("aria-label", label);
+    $("fullscreenButton").title = label;
   });
 
   const roomHeading = document.querySelector(".stream-heading h1");
