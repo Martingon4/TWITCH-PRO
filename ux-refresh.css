@@ -91,8 +91,8 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .scenario-grid .scenario-card.selected { border-color: #b29dff; background: linear-gradient(140deg, #392e54, #1c3034); box-shadow: inset 0 0 0 1px #b29dff55, 0 0 0 3px #aa8cff1c; }
 .scenario-grid .scenario-card:focus-visible { outline-offset: 2px; }
 .scenario-icon { width: 40px; height: 40px; border-radius: 11px; font-size: 19px; }
-.scenario-card-copy { gap: 4px; }
-.scenario-card-copy strong { display: -webkit-box; overflow: hidden; color: #f4f2fa; font-size: 13px; line-height: 1.25; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.scenario-card-copy { gap: 4px; width: 100%; }
+.scenario-card-copy strong { display: block; overflow: visible; color: #f4f2fa; font-size: 13px; line-height: 1.25; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 .scenario-card-copy small { color: #c0c2ce; font-size: 11px; line-height: 1.4; }
 .scenario-check { width: 24px; height: 24px; font-size: 15px; }
 .scenario-card[aria-pressed="true"] .scenario-check { border-color: #d8caff; background: #8568d4; color: #fff; }
