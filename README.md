@@ -4,15 +4,16 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 
 ## Funciones
 
-- Escape rooms generados a partir de la situación que escribe el streamer. Con OpenAI activo, cada sala trae tres acertijos de varios pasos, objetos y nombres de comando propios, respuestas validadas, un código y un ambiente visual.
-- Una sala de respaldo jugable si no hay clave de OpenAI o si falla la generación.
+- Catálogo de ocho plantillas jugables (nave, mansión, templo, laboratorio, base submarina, museo, estación polar y festival), más una aventura sorpresa. Cada una incluye una historia, tres acertijos, pistas graduales y un código comprobable.
+- Modo plantilla seleccionado por defecto: no llama a OpenAI ni consume créditos de API. Se puede editar el tema para incorporarlo a la historia; la plantilla conserva sus acertijos. La opción de IA está separada y marcada porque sí consume créditos cuando la API acepta la solicitud.
+- Si una generación con IA falla o no hay saldo, la app elige una plantilla y deja el motivo visible en el dossier.
 - Co-Caster Mimo: reacciones breves, amables y basadas en hasta ocho mensajes recientes; hay frases locales de respaldo.
 - Chat de Twitch mediante EventSub WebSocket y autorización Device Code.
 - Canjes de puntos de canal conectados a acciones de Nexo mediante EventSub; las acciones aceptadas se limitan a una pista, un estilo, una propuesta de tema y una reacción de Mimo.
 - Interacción comunitaria: la participación carga energía, `!pista` desbloquea ayuda y el chat vota por efectos visuales.
 - Escena 3D con Three.js, efectos ambientales y overlay para OBS en `http://localhost:4173/?overlay=1`.
 
-El modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat. Los tokens de Twitch se mantienen en memoria y se eliminan al apagar el servidor.
+En el modo de IA, el modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat. Los tokens de Twitch se mantienen en memoria y se eliminan al apagar el servidor.
 
 ## Requisitos y arranque
 
@@ -56,7 +57,7 @@ El archivo `render.yaml` prepara Nexo como un servicio web de Node en Render. Cr
 - `APP_PASSWORD`: contraseña compartida para que solo el streamer y los testers abran el panel.
 - `APP_SESSION_SECRET`: Render lo genera automáticamente al crear el Blueprint.
 - `OVERLAY_TOKEN`: clave aleatoria que protege el enlace de OBS. Genérala con `openssl rand -hex 32` y no compartas el enlace públicamente.
-- `OPENAI_API_KEY`: necesaria para crear acertijos únicos basados en la situación; sin ella se usa una plantilla jugable y el panel lo indica.
+- `OPENAI_API_KEY`: opcional para el modo de IA, que crea acertijos únicos y consume créditos de la API. Las plantillas funcionan sin esa clave.
 
 Al terminar el despliegue, Render muestra una URL pública. El panel pide `APP_PASSWORD`. Para OBS usa `https://TU-SERVICIO.onrender.com/?overlay=1&key=TU_OVERLAY_TOKEN`. Mantén esa dirección privada porque permite abrir el overlay del canal.
 
@@ -88,11 +89,21 @@ Para proteger la escena, los títulos de otras recompensas no ejecutan comandos.
 - `!ayuda` — muestra la lista de comandos.
 - En modo demo, `!canje pista`, `!canje estilo neon`, `!canje tema bosque` y `!canje mimo` simulan recompensas para probarlas sin conectar Twitch.
 
+## Crear una sala con plantilla
+
+1. Deja seleccionado **Plantilla · sin costo**.
+2. Elige uno de los escenarios o escribe una situación propia. El texto libre se incorpora a la historia y el sistema elige una plantilla compatible; sus acertijos están listos y no requieren IA.
+3. Pulsa **Crear sala** y revisa el dossier para ver el objetivo, los tres objetos y el primer comando.
+4. En el chat, usa `!examinar [objeto]`, después `!resolver [objeto] [respuesta]` para cada pista y finalmente `!codigo [código]`.
+
+La opción **IA · usa créditos** solo debe elegirse si la cuenta de API tiene saldo disponible. Si OpenAI no acepta la solicitud, Nexo entrega una plantilla y explica el motivo.
+
 Los temas propuestos por el chat se revisan antes de crear una sala. Los usuarios no pueden enviar CSS ni código; solo pueden elegir entre los estilos permitidos. La participación repetida tiene enfriamiento.
 
 ## Archivos
 
 - `server.mjs`: servidor Node, endpoints locales, generación de salas y conexión Twitch.
+- `room-templates.mjs`: catálogo y construcción determinista de salas sin API.
 - `app.js`: partida, comandos, Co-Caster y sincronización del overlay.
 - `index.html`, `styles.css`, `enhancements.css`, `scene3d.js`: panel, escena 3D con Three.js y overlay OBS.
 - `.env.example`: nombres de variables sin credenciales.

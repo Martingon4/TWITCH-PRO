@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildTemplateRoom } from "./room-templates.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)));
 loadEnvironment();
@@ -21,6 +22,7 @@ const staticFiles = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+  ["/room-templates.mjs", ["room-templates.mjs", "text/javascript; charset=utf-8"]],
   ["/scene3d.js", ["scene3d.js", "text/javascript; charset=utf-8"]],
   ["/three.module.js", ["node_modules/three/build/three.module.js", "text/javascript; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
@@ -137,25 +139,17 @@ async function fetchJson(url, options = {}) {
 const clueIds = ["reloj", "estatua", "antorcha"];
 const clueLabels = { reloj: "HORA", estatua: "PIEDRA", antorcha: "LLAMA" };
 
-function fallbackRoom(theme = "archivo submarino") {
-  const cleanTheme = String(theme).replace(/[<>\u0000-\u001f]/g, " ").trim().slice(0, 64) || "archivo submarino";
-  const title = cleanTheme.toLocaleLowerCase("es").includes("archivo") ? "El Archivo Sumergido" : `${cleanTheme.charAt(0).toLocaleUpperCase("es")}${cleanTheme.slice(1)}: la Cámara Sellada`;
-  const lowerTheme = cleanTheme.toLocaleLowerCase("es");
-  const environment = /espaci|planeta|nave|luna|galax|astronaut|orbita|órbita/.test(lowerTheme) ? "space" : /bosque|jungla|selva|templo|isla|jardin|jardín/.test(lowerTheme) ? "jungle" : /fantasma|embruj|castillo|cripta|vampir|terror/.test(lowerTheme) ? "haunted" : "underwater";
-  const clues = {
-    reloj: { name: "RELOJ", digit: "2", answer: "2", riddle: "En el panel del reloj aparece (18 ÷ 3) − 4. ¿Qué cifra resulta?", hint: "Resuelve primero la división y luego resta 4.", caption: "El reloj plantea una cuenta de dos pasos. Resuélvanla con !resolver reloj [respuesta]." },
-    estatua: { name: "ESTATUA", digit: "4", answer: "4", riddle: "La estatua protege una caja con (3 × 6) − 14 sellos. ¿Cuántos quedan?", hint: "Multiplica 3 por 6 antes de restar 14.", caption: "La estatua oculta una operación de dos pasos. Resuélvanla con !resolver estatua [respuesta]." },
-    antorcha: { name: "ANTORCHA", digit: "1", answer: "1", riddle: "La antorcha muestra (20 ÷ 2) − 9 marcas. ¿Cuántas quedan encendidas?", hint: "Divide 20 entre 2 y luego resta 9.", caption: "La antorcha oculta una cuenta breve. Resuélvanla con !resolver antorcha [respuesta]." },
-  };
-  return { title: title.slice(0, 50), theme: cleanTheme, summary: `El reto parte de «${cleanTheme}». El chat debe investigar tres objetos, resolver sus acertijos y reunir la combinación para abrir la bóveda.`, environment, opening: `Situación: ${cleanTheme}. Encuentren los tres objetos, resuelvan sus acertijos con !resolver y usen el código en la bóveda.`, clues, code: "241", source: "plantilla" };
-}
-
 function roomFallbackNote(error) {
   const status = Number(error?.status || 0);
-  const message = String(error?.message || "").toLowerCase();
+  const details = error?.body?.error || {};
+  const message = [error?.message, details?.code, details?.type, details?.message]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
   if (status === 401) return "OpenAI rechazó la clave. Confirma OPENAI_API_KEY en Render y vuelve a desplegar.";
-  if (status === 429 && /quota|billing|credit|limit/.test(message)) return "OpenAI alcanzó el límite de uso o necesita crédito de API. Revisa Usage y Billing de la cuenta.";
-  if (status === 429) return "OpenAI está limitando solicitudes por el momento. Espera unos segundos e inténtalo otra vez.";
+  if (status === 429 && /rate[_ -]?limit|requests per minute|tokens per minute|too many requests/.test(message)) return "OpenAI limitó la velocidad de solicitudes. Espera un minuto antes de volver a crear la sala; no significa necesariamente que falte crédito.";
+  if (status === 429 && /insufficient_quota|credit_balance_exhausted|organization_usage_limit_exceeded|organization_spend_limit_exceeded|project_spend_limit_exceeded|quota|billing|credit/.test(message)) return "OpenAI rechazó la generación por crédito o límite de uso/gasto. Revisa Usage, Billing y Limits de la organización o proyecto de la API.";
+  if (status === 429) return "OpenAI respondió con error 429. Puede ser un límite temporal de solicitudes o un límite de uso/crédito; revisa el detalle del error en Render para saber cuál.";
   if (/timeout|timed out|abort/.test(message)) return "La solicitud a OpenAI tardó demasiado. Inténtalo otra vez cuando el servicio esté despierto.";
   if (status >= 500) return "OpenAI no está respondiendo ahora. La sala se creó con la plantilla de respaldo.";
   return "No se pudo confirmar la respuesta de OpenAI. Revisa el registro del servicio en Render; esta sala usa la plantilla de respaldo.";
@@ -208,10 +202,12 @@ function outputText(response) {
   return chunks.join("\n");
 }
 
-async function generateRoom(theme) {
+async function generateRoom(theme, mode = "template", templateId = "") {
   const prompt = String(theme || "").trim().replace(/[<>\u0000-\u001f]/g, " ").slice(0, 120);
-  if (!prompt) throw Object.assign(new Error("Escribe un tema para crear la sala."), { status: 400 });
-  if (!process.env.OPENAI_API_KEY) return { room: fallbackRoom(prompt), note: "OPENAI_API_KEY no está configurada; se usó una plantilla jugable." };
+  const situation = prompt || "Aventura sorpresa";
+  if (mode !== "ai") return { room: buildTemplateRoom(situation, templateId), note: "Modo plantilla: esta sala ya viene lista para jugar y no consume créditos de API." };
+  if (!prompt) throw Object.assign(new Error("Escribe una situación para crear la sala con IA."), { status: 400 });
+  if (!process.env.OPENAI_API_KEY) return { room: buildTemplateRoom(prompt, templateId), note: "No hay una clave de OpenAI configurada; se creó una sala de plantilla sin usar API." };
   try {
     const response = await fetchJson("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -230,7 +226,7 @@ async function generateRoom(theme) {
     const parsed = JSON.parse(text);
     return { room: safeRoomFromModel(parsed, prompt), note: null };
   } catch (error) {
-    return { room: fallbackRoom(prompt), note: roomFallbackNote(error) };
+    return { room: buildTemplateRoom(prompt, templateId), note: `${roomFallbackNote(error)} Se cargó la plantilla «${buildTemplateRoom(prompt, templateId).templateLabel}»; esta sala se puede jugar sin API.` };
   }
 }
 
@@ -502,7 +498,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && url.pathname === "/api/rooms/generate") {
       const body = await readJson(req);
-      const result = await generateRoom(body.theme);
+      const result = await generateRoom(body.theme, body.mode, body.templateId);
       broadcast("room-generated", result);
       return json(res, 200, result);
     }
@@ -536,7 +532,7 @@ if (process.env.NODE_ENV === "production" && (!APP_PASSWORD || !APP_SESSION_SECR
 server.listen(PORT, HOST, () => {
   console.log(`Nexo disponible en http://${HOST}:${PORT}`);
   if (!process.env.TWITCH_CLIENT_ID) console.log("Twitch desconectado: configura TWITCH_CLIENT_ID en .env.");
-  if (!process.env.OPENAI_API_KEY) console.log("IA desactivada: configura OPENAI_API_KEY en .env para generar salas y líneas del Co-Caster.");
+  if (!process.env.OPENAI_API_KEY) console.log("OpenAI no está configurado; las salas de plantilla siguen disponibles sin créditos de API.");
 });
 
 process.on("SIGINT", () => { disconnectTwitch(); server.close(() => process.exit(0)); });

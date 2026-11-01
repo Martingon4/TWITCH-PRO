@@ -35,7 +35,7 @@
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
     serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
     eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null,
-    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, styleVotes: new Map(),
+    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, styleVotes: new Map(), roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "",
   };
   const users = [
     { name: "pixelpirata", avatar: "P", color: "coral" },
@@ -350,6 +350,8 @@
     } else if (action === "tema") {
       if (!inputText) return showCaption("Configura Nexo · Tema para pedir una idea en el mensaje de canje.");
       $("themeInput").value = inputText;
+      state.selectedTemplateId = "";
+      document.querySelectorAll("[data-template]").forEach((choice) => choice.classList.remove("selected"));
       addMessage({ user: "Sistema", text: `${user} propuso «${inputText}» con puntos del canal. El streamer revisa la idea antes de crearla.`, system: true, good: true });
       showEvent(`${user} propuso una sala con puntos`);
     } else {
@@ -428,6 +430,8 @@
         return;
       }
       $("themeInput").value = theme;
+      state.selectedTemplateId = "";
+      document.querySelectorAll("[data-template]").forEach((choice) => choice.classList.remove("selected"));
       addMessage({ user: "Sistema", text: `${user} propuso el tema «${theme}». El streamer puede revisarlo y crear la sala.`, system: true, good: true });
       showEvent(`${user} propuso una nueva sala`);
       return;
@@ -438,7 +442,8 @@
       return;
     }
     if (command === "ayuda" || command === "help") {
-      addMessage({ user: "Sistema", text: "Comandos: !examinar [objeto] · !resolver [objeto] [respuesta] · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !reacciona", system: true });
+      const objects = ["reloj", "estatua", "antorcha"].map((id) => state.room.clues[id].name.toLocaleLowerCase("es")).join(", ");
+      addMessage({ user: "Sistema", text: `Objetos: ${objects}. Comandos: !examinar [objeto] · !resolver [objeto] [respuesta] · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !reacciona`, system: true });
       return;
     }
     if (command === "votar") {
@@ -466,19 +471,20 @@
 
   function applyRoom(room, note = null) {
     if (!room || !room.clues) return;
+    const noteIsWarning = Boolean(note && !note.startsWith("Modo plantilla:"));
     const roomKey = `${room.title}|${room.code}|${room.opening}|${JSON.stringify(room.clues)}`;
     if (roomKey === state.lastRoomKey) {
       const generatedWithAI = room.source === "openai";
       const sourceBadge = $("roomSourceBadge");
-      sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : "PLANTILLA DE RESPALDO";
+      sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
       sourceBadge.classList.toggle("source-ai", generatedWithAI);
       sourceBadge.classList.toggle("source-template", !generatedWithAI);
       const noteElement = $("roomGenerationNote");
       noteElement.hidden = false;
-      noteElement.classList.toggle("warning", Boolean(note) || !generatedWithAI);
+      noteElement.classList.toggle("warning", noteIsWarning);
       noteElement.textContent = note || (generatedWithAI
         ? "OpenAI creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos."
-        : "Esta sala usa acertijos de plantilla. El tema aparece en la historia, pero los acertijos no se personalizaron con OpenAI.");
+        : "Plantilla lista para jugar: escenario, acertijos, respuestas y combinación ya definidos. No se usaron créditos de API.");
       return;
     }
     state.lastRoomKey = roomKey;
@@ -498,7 +504,7 @@
     $("roomEnvironmentFact").textContent = `Atmósfera · ${environmentNames[room.environment] || environmentNames.underwater}`;
     const sourceBadge = $("roomSourceBadge");
     const generatedWithAI = room.source === "openai";
-    sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : "PLANTILLA DE RESPALDO";
+    sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
     sourceBadge.classList.toggle("source-ai", generatedWithAI);
     sourceBadge.classList.toggle("source-template", !generatedWithAI);
     const objectList = $("roomObjectList");
@@ -510,7 +516,7 @@
       const name = document.createElement("strong");
       name.textContent = clue.name || id.toLocaleUpperCase("es");
       const riddle = document.createElement("span");
-      riddle.textContent = clue.riddle || clue.caption || "Acertijo por descubrir.";
+      riddle.textContent = `Acertijo oculto · examinen ${String(clue.name || id).toLocaleLowerCase("es")} en el chat.`;
       item.append(name, riddle);
       objectList.append(item);
     });
@@ -521,10 +527,10 @@
     $("roomFirstStep").append(firstCommand, document.createTextNode(" en el chat."));
     const generationNote = $("roomGenerationNote");
     generationNote.hidden = false;
-    generationNote.classList.toggle("warning", Boolean(note) || !generatedWithAI);
+    generationNote.classList.toggle("warning", noteIsWarning);
     generationNote.textContent = note || (generatedWithAI
       ? "OpenAI creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos."
-      : "Esta sala usa acertijos de plantilla. El tema aparece en la historia, pero los acertijos no se personalizaron con OpenAI.");
+      : "Plantilla lista para jugar: escenario, acertijos, respuestas y combinación ya definidos. No se usaron créditos de API.");
     renderObjectLabels();
     $("sceneHint").textContent = "Examinen cada objeto, resuelvan sus acertijos y prueben el código final.";
     $("chatBannerText").innerHTML = `Encuentren los objetos, resuelvan sus acertijos y escriban <b>!codigo [código]</b>.`;
@@ -533,9 +539,9 @@
     showCaption(room.opening);
     const generatedMessage = room.source === "openai"
       ? `Sala «${room.title}» generada con OpenAI. ${room.summary || room.opening} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")} en el chat.`
-      : `Sala «${room.title}» creada con plantilla. ${note || "Los acertijos son de respaldo y no están adaptados por OpenAI."} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")}.`;
-    addMessage({ user: "NEXO · MISIÓN", text: generatedMessage, system: true, good: room.source === "openai" });
-    showEvent(room.source === "openai" ? "Sala generada con OpenAI · mira el dossier" : "Sala de respaldo · mira el motivo en el dossier");
+      : `Sala «${room.title}» lista · ${room.templateLabel || "plantilla jugable"}. ${room.summary || room.opening} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")} en el chat.`;
+    addMessage({ user: "NEXO · MISIÓN", text: generatedMessage, system: true, good: true });
+    showEvent(room.source === "openai" ? "Sala generada con OpenAI · mira el dossier" : `Plantilla jugable · ${room.templateLabel || "aventura"}`);
   }
 
   function resetGame(showMessage = true) {
@@ -572,39 +578,43 @@
   }
 
   async function createRoom(theme) {
-    const prompt = String(theme || "").trim();
-    if (!prompt) return showToast("Escribe un tema para la sala.");
+    const typedPrompt = String(theme || "").trim();
+    if (state.roomMode === "ai" && !typedPrompt) return showToast("Escribe una situación para generarla con IA.");
+    const prompt = typedPrompt || state.selectedTemplateLabel || "Aventura sorpresa";
     const button = $("generateButton");
     button.disabled = true;
-    button.textContent = "GENERANDO…";
+    button.textContent = state.roomMode === "ai" ? "GENERANDO…" : "PREPARANDO…";
     $("aiStatus").classList.add("busy");
     $("roomGenerationNote").hidden = false;
     $("roomGenerationNote").classList.remove("warning");
-    $("roomGenerationNote").textContent = "Conectando con Nexo y pidiendo a OpenAI una historia y tres acertijos basados en esta situación… Si Render estaba dormido, la primera respuesta puede tardar.";
-    $("roomSourceBadge").textContent = "GENERANDO SALA…";
+    $("roomGenerationNote").textContent = state.roomMode === "ai"
+      ? "Se enviará esta situación a OpenAI. La generación consume créditos de la API; si no hay saldo, se cargará una plantilla jugable."
+      : "Preparando una sala del catálogo local. Esta opción no llama a OpenAI ni consume créditos.";
+    $("roomSourceBadge").textContent = state.roomMode === "ai" ? "GENERANDO SALA…" : "CARGANDO PLANTILLA…";
     $("roomSourceBadge").classList.remove("source-ai", "source-template");
     try {
-      const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt }) });
+      const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt, mode: state.roomMode, templateId: state.selectedTemplateId }) });
       state.serverAvailable = true;
       applyRoom(result.room, result.note);
       if (result.room?.source === "openai") requestCaster("room");
       $("themeInput").value = "";
     } catch (error) {
-      const room = structuredClone(fallbackRoom);
-      room.theme = prompt.slice(0, 64);
-      room.title = `${prompt.charAt(0).toLocaleUpperCase("es")}${prompt.slice(1, 43)}: la Cámara Sellada`;
-      room.summary = `El chat investiga «${room.theme}» resolviendo tres acertijos de respaldo para abrir la bóveda.`;
-      room.opening = `Situación: ${room.theme}. Resuelvan los tres acertijos y usen el código para abrir la bóveda.`;
-      const lowerTheme = prompt.toLocaleLowerCase("es");
-      room.environment = /espaci|planeta|nave|luna|galax|astronaut|órbita|orbita/.test(lowerTheme) ? "space" : /bosque|jungla|selva|templo|isla|jardín|jardin/.test(lowerTheme) ? "jungle" : /fantasma|embruj|castillo|cripta|vampir|terror/.test(lowerTheme) ? "haunted" : "underwater";
-      room.source = "plantilla";
+      let room;
+      try {
+        const templates = await import("./room-templates.mjs");
+        room = templates.buildTemplateRoom(prompt, state.selectedTemplateId);
+      } catch {
+        room = structuredClone(fallbackRoom);
+        room.theme = prompt.slice(0, 64);
+        room.source = "plantilla";
+      }
       state.serverAvailable = false;
-      const explanation = `No se pudo contactar al servidor (${error.message || "sin respuesta"}). Se cargó una plantilla local; OpenAI no generó esta sala. Revisa que Render esté en línea y vuelve a intentarlo.`;
+      const explanation = `No se pudo contactar al servidor (${error.message || "sin respuesta"}). La sala se creó localmente con una plantilla; se puede probar en esta página.`;
       applyRoom(room, explanation);
-      showToast("Se usó plantilla local · consulta el dossier de la misión");
+      showToast("Plantilla local cargada · puedes jugar esta sala");
     } finally {
       button.disabled = false;
-      button.innerHTML = "CREAR SALA <span>↗</span>";
+      button.innerHTML = state.roomMode === "ai" ? "CREAR CON IA <span>↗</span>" : "CREAR SALA <span>↗</span>";
       $("aiStatus").classList.remove("busy");
     }
   }
@@ -638,8 +648,11 @@
       $("chatInput").placeholder = "Escribe un comando...";
     }
     const ai = $("aiStatus");
-    ai.classList.toggle("ready", state.aiEnabled);
-    ai.innerHTML = `<span class="ai-indicator"></span>${state.aiEnabled ? `OPENAI CONFIGURADO · ${escapeHTML(payload.ai.model)}` : "PLANTILLAS · OPENAI NO CONFIGURADO"}`;
+    ai.classList.toggle("ready", true);
+    const aiText = state.roomMode === "ai"
+      ? `IA SELECCIONADA · REQUIERE CRÉDITOS${state.aiEnabled ? " DE API" : " Y CLAVE DE API"}`
+      : state.aiEnabled ? "PLANTILLAS SIN COSTO · IA OPCIONAL" : "PLANTILLAS SIN COSTO · IA NO CONFIGURADA";
+    ai.innerHTML = `<span class="ai-indicator"></span>${aiText}`;
   }
 
   function connectEvents() {
@@ -754,6 +767,30 @@
     event.preventDefault();
     createRoom($("themeInput").value);
   });
+  function selectRoomMode(mode) {
+    state.roomMode = mode === "ai" ? "ai" : "template";
+    const isAI = state.roomMode === "ai";
+    $("templateModeButton").classList.toggle("active", !isAI);
+    $("aiModeButton").classList.toggle("active", isAI);
+    $("templateModeButton").setAttribute("aria-pressed", String(!isAI));
+    $("aiModeButton").setAttribute("aria-pressed", String(isAI));
+    $("generateButton").innerHTML = isAI ? "CREAR CON IA <span>↗</span>" : "CREAR SALA <span>↗</span>";
+    const statusText = isAI ? "ATENCIÓN · IA CONSUME CRÉDITOS DE API" : state.aiEnabled ? "PLANTILLAS SIN COSTO · IA OPCIONAL" : "PLANTILLAS SIN COSTO · IA NO CONFIGURADA";
+    $("aiStatus").innerHTML = `<span class="ai-indicator"></span>${statusText}`;
+  }
+  $("templateModeButton").addEventListener("click", () => selectRoomMode("template"));
+  $("aiModeButton").addEventListener("click", () => selectRoomMode("ai"));
+  document.querySelectorAll("[data-template]").forEach((button) => button.addEventListener("click", () => {
+    state.selectedTemplateId = button.dataset.template;
+    state.selectedTemplateLabel = button.dataset.label;
+    document.querySelectorAll("[data-template]").forEach((choice) => {
+      choice.classList.toggle("selected", choice === button);
+      choice.setAttribute("aria-pressed", String(choice === button));
+    });
+    if (!$("themeInput").value.trim()) $("themeInput").value = button.dataset.label;
+    $("themeInput").placeholder = `Situación para «${button.dataset.label}» (puedes editarla)...`;
+    $("themeInput").focus();
+  }));
   document.querySelectorAll("[data-command]").forEach((button) => button.addEventListener("click", () => {
     input.value = button.dataset.command;
     input.focus();
@@ -786,5 +823,6 @@
   document.body.classList.toggle("overlay-mode", overlayMode);
   connectEvents();
   checkServer();
+  selectRoomMode("template");
   seedChat();
 })();

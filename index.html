@@ -31,9 +31,16 @@
           </div>
 
           <section class="creation-bar panel" aria-label="Crear una sala">
-            <div class="creation-copy"><span class="creation-icon">✳</span><div><span class="section-kicker">CONVIERTE UNA SITUACIÓN EN UN RETO</span><p>Describe el problema que el chat tendrá que resolver.</p></div></div>
-            <form class="creation-form" id="roomForm"><label class="sr-only" for="themeInput">Situación para la sala</label><input id="themeInput" maxlength="120" placeholder="Ej.: la nave perdió oxígeno y hay que reiniciar sus motores..."/><button id="generateButton" type="submit">CREAR SALA <span>↗</span></button></form>
-            <span class="ai-status" id="aiStatus"><span class="ai-indicator"></span> IA · DEMO LOCAL</span>
+            <div class="creation-copy"><span class="creation-icon">✳</span><div><span class="section-kicker">ELIGE UNA SITUACIÓN PARA EL CHAT</span><p>Las plantillas tienen acertijos listos; tu idea se suma al contexto de la historia.</p></div></div>
+            <div class="creation-options">
+              <div class="room-mode" role="group" aria-label="Modo de creación"><button class="mode-option active" id="templateModeButton" type="button" aria-pressed="true">PLANTILLA · SIN COSTO</button><button class="mode-option" id="aiModeButton" type="button" aria-pressed="false">IA · USA CRÉDITOS</button></div>
+              <form class="creation-form" id="roomForm"><label class="sr-only" for="themeInput">Situación para la sala</label><input id="themeInput" maxlength="120" placeholder="Ej.: una nave perdió energía y el chat debe repararla..."/><button id="generateButton" type="submit">CREAR SALA <span>↗</span></button></form>
+            </div>
+            <div class="scenario-picker" aria-label="Escenarios disponibles">
+              <span>ESCENARIOS</span>
+              <button type="button" data-template="space" data-label="Nave espacial">NAVE</button><button type="button" data-template="mansion" data-label="Mansión misteriosa">MANSIÓN</button><button type="button" data-template="jungle" data-label="Templo en la jungla">TEMPLO</button><button type="button" data-template="lab" data-label="Laboratorio secreto">LABORATORIO</button><button type="button" data-template="underwater" data-label="Base submarina">SUBMARINO</button><button type="button" data-template="museum" data-label="Museo de noche">MUSEO</button><button type="button" data-template="arctic" data-label="Estación polar">ESTACIÓN POLAR</button><button type="button" data-template="festival" data-label="Festival en caos">FESTIVAL</button><button type="button" data-template="generic" data-label="Aventura sorpresa">SORPRESA</button>
+            </div>
+            <span class="ai-status" id="aiStatus"><span class="ai-indicator"></span> PLANTILLAS LISTAS · IA OPCIONAL</span>
           </section>
 
           <section class="room-brief panel" id="roomBrief" aria-live="polite" aria-label="Resumen de la sala">
