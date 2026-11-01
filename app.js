@@ -351,7 +351,8 @@
       if (!inputText) return showCaption("Configura Nexo · Tema para pedir una idea en el mensaje de canje.");
       $("themeInput").value = inputText;
       state.selectedTemplateId = "";
-      document.querySelectorAll("[data-template]").forEach((choice) => choice.classList.remove("selected"));
+      state.selectedTemplateLabel = "";
+      document.querySelectorAll("[data-template]").forEach((choice) => { choice.classList.remove("selected"); choice.setAttribute("aria-pressed", "false"); const check = choice.querySelector(".scenario-check"); if (check) check.textContent = "+"; });
       addMessage({ user: "Sistema", text: `${user} propuso «${inputText}» con puntos del canal. El streamer revisa la idea antes de crearla.`, system: true, good: true });
       showEvent(`${user} propuso una sala con puntos`);
     } else {
@@ -431,7 +432,8 @@
       }
       $("themeInput").value = theme;
       state.selectedTemplateId = "";
-      document.querySelectorAll("[data-template]").forEach((choice) => choice.classList.remove("selected"));
+      state.selectedTemplateLabel = "";
+      document.querySelectorAll("[data-template]").forEach((choice) => { choice.classList.remove("selected"); choice.setAttribute("aria-pressed", "false"); const check = choice.querySelector(".scenario-check"); if (check) check.textContent = "+"; });
       addMessage({ user: "Sistema", text: `${user} propuso el tema «${theme}». El streamer puede revisarlo y crear la sala.`, system: true, good: true });
       showEvent(`${user} propuso una nueva sala`);
       return;
@@ -490,18 +492,26 @@
     state.lastRoomKey = roomKey;
     state.room = room;
     const environments = ["underwater", "space", "haunted", "jungle"];
+    const roomThemes = ["space", "mansion", "jungle", "lab", "underwater", "museum", "arctic", "festival", "generic"];
     const environmentNames = { underwater: "Bajo el agua", space: "Espacio profundo", haunted: "Mansión encantada", jungle: "Jungla antigua" };
     const scene = $("scene");
     scene.classList.remove(...environments.map((environment) => `environment-${environment}`));
     scene.classList.add(`environment-${environments.includes(room.environment) ? room.environment : "underwater"}`);
     syncThreeScene("environment", { environment: environments.includes(room.environment) ? room.environment : "underwater" });
+    scene.classList.remove(...roomThemes.map((theme) => `theme-${theme}`));
+    const visualTheme = roomThemes.includes(room.templateId) ? room.templateId : (environments.includes(room.environment) ? room.environment : "generic");
+    scene.classList.add(`theme-${visualTheme}`);
+    syncThreeScene("template", { templateId: visualTheme });
     $("streamHeadingTitle").textContent = room.title;
     $("roomLabelText").textContent = room.title.toLocaleUpperCase("es").slice(0, 30);
+    const locationLabels = { space: "ÓRBITA · 42 000 KM", mansion: "ALA ESTE · 3ER PISO", jungle: "TEMPLO · NIVEL 02", lab: "PROTOCOLO · PRISMA", underwater: "PRESIÓN · 38 M", museum: "SALA · NOCTURNA", arctic: "TEMPERATURA · −32 °C", festival: "EN VIVO · SEÑAL 01", generic: "CÁMARA · NIVEL 01" };
+    document.querySelector(".room-label .mono").textContent = locationLabels[visualTheme];
     $("sceneCaption").lastElementChild.textContent = room.opening;
     $("roomBriefTitle").textContent = room.title;
     $("roomBriefStory").textContent = room.summary || room.opening || `El chat debe resolver tres acertijos inspirados en «${room.theme || "la situación propuesta"}» y abrir la bóveda.`;
     $("roomThemeFact").textContent = `Situación · ${room.theme || "Reto de la comunidad"}`;
-    $("roomEnvironmentFact").textContent = `Atmósfera · ${environmentNames[room.environment] || environmentNames.underwater}`;
+    const themeAtmospheres = { space: "Órbita exterior", mansion: "Mansión espectral", jungle: "Templo de la selva", lab: "Laboratorio secreto", underwater: "Abismo oceánico", museum: "Museo cerrado", arctic: "Estación polar", festival: "Escenario en vivo", generic: "Cámara misteriosa" };
+    $("roomEnvironmentFact").textContent = `Atmósfera · ${themeAtmospheres[visualTheme] || environmentNames[room.environment] || environmentNames.underwater}`;
     const sourceBadge = $("roomSourceBadge");
     const generatedWithAI = room.source === "openai";
     sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
@@ -521,10 +531,13 @@
       objectList.append(item);
     });
     const firstObject = room.clues.reloj?.name || "reloj";
-    $("roomFirstStep").replaceChildren(document.createTextNode("Empiecen con "));
-    const firstCommand = document.createElement("code");
-    firstCommand.textContent = `!examinar ${firstObject.toLocaleLowerCase("es")}`;
-    $("roomFirstStep").append(firstCommand, document.createTextNode(" en el chat."));
+    const firstCommandText = `!examinar ${firstObject.toLocaleLowerCase("es")}`;
+    $("roomFirstCommand").dataset.command = firstCommandText;
+    const firstCommand = $("roomFirstCommand");
+    const arrow = document.createElement("span");
+    arrow.textContent = "↗";
+    arrow.setAttribute("aria-hidden", "true");
+    firstCommand.replaceChildren(document.createTextNode(firstCommandText), arrow);
     const generationNote = $("roomGenerationNote");
     generationNote.hidden = false;
     generationNote.classList.toggle("warning", noteIsWarning);
@@ -781,16 +794,25 @@
   $("templateModeButton").addEventListener("click", () => selectRoomMode("template"));
   $("aiModeButton").addEventListener("click", () => selectRoomMode("ai"));
   document.querySelectorAll("[data-template]").forEach((button) => button.addEventListener("click", () => {
+    const previousLabel = state.selectedTemplateLabel;
+    const currentInput = $("themeInput").value.trim();
     state.selectedTemplateId = button.dataset.template;
     state.selectedTemplateLabel = button.dataset.label;
     document.querySelectorAll("[data-template]").forEach((choice) => {
       choice.classList.toggle("selected", choice === button);
       choice.setAttribute("aria-pressed", String(choice === button));
+      const check = choice.querySelector(".scenario-check");
+      if (check) check.textContent = choice === button ? "✓" : "+";
     });
-    if (!$("themeInput").value.trim()) $("themeInput").value = button.dataset.label;
+    if (!currentInput || currentInput === previousLabel) $("themeInput").value = button.dataset.label;
     $("themeInput").placeholder = `Situación para «${button.dataset.label}» (puedes editarla)...`;
     $("themeInput").focus();
   }));
+  $("roomFirstCommand").addEventListener("click", () => {
+    input.value = $("roomFirstCommand").dataset.command || "!examinar reloj";
+    input.focus();
+    showToast("Comando listo · envíalo para revelar el primer acertijo");
+  });
   document.querySelectorAll("[data-command]").forEach((button) => button.addEventListener("click", () => {
     input.value = button.dataset.command;
     input.focus();

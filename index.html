@@ -31,14 +31,24 @@
           </div>
 
           <section class="creation-bar panel" aria-label="Crear una sala">
-            <div class="creation-copy"><span class="creation-icon">✳</span><div><span class="section-kicker">ELIGE UNA SITUACIÓN PARA EL CHAT</span><p>Las plantillas tienen acertijos listos; tu idea se suma al contexto de la historia.</p></div></div>
+            <div class="creation-copy"><span class="creation-icon">✳</span><div><span class="section-kicker">ELIGE UNA SITUACIÓN PARA EL CHAT</span><p>Las tarjetas usan acertijos listos. Para un mundo nuevo, descríbelo y activa IA.</p></div></div>
             <div class="creation-options">
               <div class="room-mode" role="group" aria-label="Modo de creación"><button class="mode-option active" id="templateModeButton" type="button" aria-pressed="true">PLANTILLA · SIN COSTO</button><button class="mode-option" id="aiModeButton" type="button" aria-pressed="false">IA · USA CRÉDITOS</button></div>
               <form class="creation-form" id="roomForm"><label class="sr-only" for="themeInput">Situación para la sala</label><input id="themeInput" maxlength="120" placeholder="Ej.: una nave perdió energía y el chat debe repararla..."/><button id="generateButton" type="submit">CREAR SALA <span>↗</span></button></form>
             </div>
-            <div class="scenario-picker" aria-label="Escenarios disponibles">
-              <span>ESCENARIOS</span>
-              <button type="button" data-template="space" data-label="Nave espacial">NAVE</button><button type="button" data-template="mansion" data-label="Mansión misteriosa">MANSIÓN</button><button type="button" data-template="jungle" data-label="Templo en la jungla">TEMPLO</button><button type="button" data-template="lab" data-label="Laboratorio secreto">LABORATORIO</button><button type="button" data-template="underwater" data-label="Base submarina">SUBMARINO</button><button type="button" data-template="museum" data-label="Museo de noche">MUSEO</button><button type="button" data-template="arctic" data-label="Estación polar">ESTACIÓN POLAR</button><button type="button" data-template="festival" data-label="Festival en caos">FESTIVAL</button><button type="button" data-template="generic" data-label="Aventura sorpresa">SORPRESA</button>
+            <div class="scenario-picker" role="group" aria-label="Elige el escenario de la sala">
+              <div class="scenario-picker-heading"><span>ELIGE EL MUNDO DE LA AVENTURA</span><small>Elige una tarjeta gratis, o describe tu idea y selecciona «IA · usa créditos».</small></div>
+              <div class="scenario-grid">
+                <button class="scenario-card" type="button" data-template="space" data-label="Nave espacial" aria-pressed="false"><span class="scenario-icon">✦</span><span class="scenario-card-copy"><strong>Nave espacial</strong><small>Reactiva los motores y recupera el rumbo</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="mansion" data-label="Mansión misteriosa" aria-pressed="false"><span class="scenario-icon">♜</span><span class="scenario-card-copy"><strong>Mansión misteriosa</strong><small>Encuentra las llaves antes de que cambie</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="jungle" data-label="Templo en la jungla" aria-pressed="false"><span class="scenario-icon">❋</span><span class="scenario-card-copy"><strong>Templo en la jungla</strong><small>Abre las compuertas antes de la inundación</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="lab" data-label="Laboratorio secreto" aria-pressed="false"><span class="scenario-icon">⌬</span><span class="scenario-card-copy"><strong>Laboratorio secreto</strong><small>Cancela el protocolo de cierre</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="underwater" data-label="Base submarina" aria-pressed="false"><span class="scenario-icon">≈</span><span class="scenario-card-copy"><strong>Base submarina</strong><small>Equilibra la presión y abre la escotilla</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="museum" data-label="Museo de noche" aria-pressed="false"><span class="scenario-icon">◈</span><span class="scenario-card-copy"><strong>Museo de noche</strong><small>Resuelve el misterio de la pieza perdida</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="arctic" data-label="Estación polar" aria-pressed="false"><span class="scenario-icon">❄</span><span class="scenario-card-copy"><strong>Estación polar</strong><small>Reinicia el generador durante la tormenta</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card" type="button" data-template="festival" data-label="Festival en caos" aria-pressed="false"><span class="scenario-icon">♫</span><span class="scenario-card-copy"><strong>Festival en caos</strong><small>Recupera la señal antes de salir en vivo</small></span><span class="scenario-check">＋</span></button>
+                <button class="scenario-card scenario-card-surprise" type="button" data-template="generic" data-label="Aventura sorpresa" aria-pressed="false"><span class="scenario-icon">?</span><span class="scenario-card-copy"><strong>Sorpréndeme</strong><small>Prepara un misterio inesperado</small></span><span class="scenario-check">＋</span></button>
+              </div>
             </div>
             <span class="ai-status" id="aiStatus"><span class="ai-indicator"></span> PLANTILLAS LISTAS · IA OPCIONAL</span>
           </section>
@@ -57,17 +67,18 @@
                 <div class="room-object"><strong>ESTATUA</strong><span>Calculen cuántos sellos quedan en la caja.</span></div>
                 <div class="room-object"><strong>ANTORCHA</strong><span>Resuelvan las marcas para encontrar la última cifra.</span></div>
               </div>
-              <p class="room-first-step" id="roomFirstStep">Empiecen con <code>!examinar reloj</code> en el chat.</p>
+              <div class="room-first-step" id="roomFirstStep"><span>Pulsa para preparar el primer comando</span><button class="first-step-button" id="roomFirstCommand" type="button">!examinar reloj <span aria-hidden="true">↗</span></button></div>
             </div>
             <p class="room-generation-note" id="roomGenerationNote" hidden></p>
           </section>
 
           <div class="game-frame" id="gameFrame">
             <div class="frame-topline"><span><span class="frame-dot"></span> FEED DEL STREAM</span><span class="mono">00:14:32</span></div>
-            <div class="scene scene-idle" id="scene">
+            <div class="scene scene-idle environment-underwater theme-underwater" id="scene">
               <div class="scene-grain"></div><div class="scene-vignette"></div>
               <div class="room-label"><span class="room-index">01</span><span id="roomLabelText">ARCHIVO SUMERGIDO</span><span class="room-label-line"></span><span class="mono">PROFUNDIDAD · 38 M</span></div>
               <div class="room-art" aria-label="Una cámara submarina con una puerta de acero cerrada">
+                <div class="environment-backdrop" aria-hidden="true"></div>
                 <canvas id="roomThreeCanvas" class="room-three-canvas" aria-hidden="true"></canvas>
                 <div class="water-light"></div><div class="water-mist mist-one"></div><div class="water-mist mist-two"></div>
                 <div class="wall wall-left"></div><div class="wall wall-right"></div><div class="floor"></div>
