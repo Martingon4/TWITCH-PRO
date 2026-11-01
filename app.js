@@ -37,7 +37,7 @@
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
     serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
     eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null,
-    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, styleVotes: new Map(), roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "", recentCommands: [],
+    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "", recentCommands: [],
   };
   const users = [
     { name: "pixelpirata", avatar: "P", color: "coral" },
@@ -98,13 +98,15 @@
     $("chatOnline").textContent = String(count);
   }
 
-  function setCaster(text, addToChat = true, source = "demo") {
+  function setCaster(text, addToChat = true, source = "demo", mood = "playful") {
     const safeLine = String(text || "").replace(/[<>\u0000-\u001f]/g, " ").trim().slice(0, 180);
     if (!safeLine) return;
     $("casterLine").textContent = safeLine;
     $("casterModeTag").textContent = source === "openai" ? "· IA" : source === "plantilla" ? "· RESPALDO" : "· DEMO";
     $("casterCard").classList.toggle("caster-ai", source === "openai");
     const card = $("casterCard");
+    card.classList.remove("mood-curious", "mood-worried", "mood-excited", "mood-style", "mood-playful");
+    card.classList.add(`mood-${mood}`);
     card.classList.remove("pop", "quiet");
     if (!state.effects) card.classList.add("quiet");
     void card.offsetWidth;
@@ -123,12 +125,16 @@
     try {
       const result = await api("/api/caster", { method: "POST", body: JSON.stringify({ trigger, context: state.chatContext.slice(-8) }) });
       state.serverAvailable = true;
-      setCaster(result.line, true, result.source || "openai");
+      setCaster(result.line, true, result.source || "openai", casterMood(trigger));
     } catch {
-      setCaster(randomLine(trigger), true, "plantilla");
+      setCaster(randomLine(trigger), true, "plantilla", casterMood(trigger));
     } finally {
       state.casterBusy = false;
     }
+  }
+
+  function casterMood(trigger) {
+    return ({ inspect: "curious", clue: "curious", hint: "curious", wrong: "worried", progress: "excited", open: "excited", style: "style", chat: "playful", room: "playful" })[trigger] || "playful";
   }
 
   function showToast(message) {
@@ -348,21 +354,45 @@
     $("slotCode").querySelector("i").textContent = "✓";
   }
 
+  function resolveDesignRequest(inputText) {
+    const text = String(inputText || "").toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, " ");
+    let preset = "";
+    let motion = "glow";
+    if (/aurora/.test(text)) { preset = "neon"; motion = "aurora"; }
+    if (/latido|late|corazon|pulso|pulse/.test(text)) { preset ||= "neon"; motion = "pulse"; }
+    if (/cristal|hielo|helad|escarcha|glacial/.test(text)) { preset = "bruma"; motion = "crystal"; }
+    if (/lluvia|tormenta|llover/.test(text)) { preset ||= "ambar"; motion = "rain"; }
+    if (/ambar|dorado|dorada|oro|calido|calida/.test(text)) preset = "ambar";
+    if (/bruma|azul|violeta|lavanda|morado|misterio/.test(text)) preset = "bruma";
+    if (/neon|rojo|roja|magenta|fucsia|rosa/.test(text)) preset = "neon";
+    if (!preset) return null;
+    const names = { neon: "neón magenta", ambar: "ámbar dorado", bruma: "bruma violeta" };
+    const motions = { glow: "resplandor", aurora: "aurora animada", pulse: "latido de luz", crystal: "cristales flotantes", rain: "lluvia de partículas" };
+    return { preset, motion, label: `${names[preset]} · ${motions[motion]}` };
+  }
+
   function switchPreset(name, user) {
-    const aliases = { neon: "neon", neón: "neon", ambar: "ambar", ámbar: "ambar", bruma: "bruma" };
-    const preset = aliases[name.toLocaleLowerCase("es")];
-    if (!preset) {
-      showCaption("Estilos disponibles: neon, ambar o bruma.");
+    const design = resolveDesignRequest(name);
+    if (!design) {
+      showCaption("Prueba !estilo aurora, latido, cristal, lluvia, neón, ámbar o bruma.");
       return;
     }
     const scene = $("scene");
-    scene.classList.remove("preset-neon", "preset-ambar", "preset-bruma");
-    scene.classList.add(`preset-${preset}`);
-    state.currentPreset = preset;
-    syncThreeScene("preset", { preset });
-    const names = { neon: "neón", ambar: "ámbar", bruma: "bruma submarina" };
-    showEvent(`${user} cambió el ambiente · ${names[preset]}`);
-    showToast(`El chat cambió el ambiente a ${names[preset]}`);
+    scene.classList.remove("preset-neon", "preset-ambar", "preset-bruma", "design-glow", "design-aurora", "design-pulse", "design-crystal", "design-rain");
+    scene.classList.add(`preset-${design.preset}`, `design-${design.motion}`);
+    state.currentPreset = design.preset;
+    syncThreeScene("preset", { preset: design.preset });
+    syncThreeScene("design", { preset: design.preset, motion: design.motion });
+    showEvent(`${user} rediseñó la escena · ${design.label}`);
+    showToast(`Nuevo diseño del chat · ${design.label}`);
+    const mimoLines = {
+      aurora: "¡Aurora activada! Mimo ya pidió que esta iluminación aparezca en los créditos.",
+      pulse: "La bóveda ahora late al ritmo del chat. Mimo dice que no se encariñen con ella.",
+      crystal: "Mimo llenó la escena de cristales flotantes. No los toquen; parecen decorativos.",
+      rain: "Lluvia de partículas activada. Mimo confirma que el paraguas no venía incluido.",
+      glow: "Mimo cambió las luces: la bóveda ya tiene entrada de estrella.",
+    };
+    setCaster(mimoLines[design.motion], true, "plantilla", "style");
     rewardUser(user, 7, 6000);
   }
 
@@ -392,9 +422,8 @@
     if (action === "pista") {
       applyRewardHint(user);
     } else if (action === "estilo") {
-      const allowed = new Set(["neon", "neón", "ambar", "ámbar", "bruma"]);
-      if (allowed.has(inputText.toLocaleLowerCase("es"))) switchPreset(inputText, user);
-      else showCaption("Para Nexo · Estilo, configura el mensaje del canje para pedir neon, ambar o bruma.");
+      if (resolveDesignRequest(inputText)) switchPreset(inputText, user);
+      else showCaption("Para Nexo · Estilo, pide una aurora, un latido, cristales, lluvia de partículas o un color.");
     } else if (action === "tema") {
       if (!inputText) return showCaption("Configura Nexo · Tema para pedir una idea en el mensaje de canje.");
       $("themeInput").value = inputText;
@@ -493,27 +522,7 @@
     }
     if (command === "ayuda" || command === "help") {
       const objects = ["reloj", "estatua", "antorcha"].map((id) => state.room.clues[id].name.toLocaleLowerCase("es")).join(", ");
-      addMessage({ user: "Sistema", text: `Objetos: ${objects}. Comandos: !examinar [objeto] · !resolver [objeto] [respuesta] · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !reacciona`, system: true });
-      return;
-    }
-    if (command === "votar") {
-      const aliases = { neon: "neon", neón: "neon", ambar: "ambar", ámbar: "ambar", bruma: "bruma" };
-      const choice = aliases[args.toLocaleLowerCase("es")];
-      if (!choice) {
-        addMessage({ user: "Sistema", text: "Vota por un efecto visual: !votar neon, !votar ambar o !votar bruma.", system: true });
-        return;
-      }
-      state.styleVotes.set(String(user).toLocaleLowerCase("es"), choice);
-      rewardUser(user, 3, 6000);
-      const tally = [...state.styleVotes.values()].reduce((counts, vote) => ({ ...counts, [vote]: (counts[vote] || 0) + 1 }), {});
-      const labels = { neon: "neón", ambar: "ámbar", bruma: "bruma" };
-      const leader = Object.entries(tally).sort((a, b) => b[1] - a[1])[0];
-      showEvent(`Voto registrado · ${labels[choice]} · ${state.styleVotes.size} participantes`);
-      if (state.styleVotes.size >= 3 && leader && leader[1] > (Object.values(tally).sort((a, b) => b - a)[1] || 0)) {
-        switchPreset(leader[0], "La comunidad");
-        state.styleVotes.clear();
-        addMessage({ user: "Sistema", text: `La votación eligió el estilo ${labels[leader[0]]}. ¡El chat cambió la escena!`, system: true, good: true });
-      }
+      addMessage({ user: "Sistema", text: `Objetos: ${objects}. Comandos: !examinar [objeto] · !resolver [objeto] [respuesta] · !pista · !codigo [código] · !tema [idea] · !estilo [diseño o descripción] · !reacciona`, system: true });
       return;
     }
     addMessage({ user: "Sistema", text: `Comando !${escapeHTML(command)} desconocido. Prueba !ayuda.`, system: true });
@@ -610,7 +619,6 @@
     state.examined = {};
     state.energy = 12;
     state.opened = false;
-    state.styleVotes.clear();
     $("scene").classList.remove("open", "energy-35", "energy-65", "energy-90");
     syncThreeScene("reset");
     $("successOverlay").classList.remove("visible");

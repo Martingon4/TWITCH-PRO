@@ -167,10 +167,11 @@ if (canvas && host && sceneElement) {
       haunted: { color: 0xf276c5, accent: 0xffae85, secondary: 0x9e8aff, fog: 0x241627 },
       jungle: { color: 0xb5ed55, accent: 0xffcf6e, secondary: 0x50e3bd, fog: 0x12271c },
     };
-    const presets = { neon: 0x42f5d7, ambar: 0xffb84d, bruma: 0xbabfff };
+    const presets = { neon: 0xff4fb8, ambar: 0xffb84d, bruma: 0xbabfff };
     let environment = "underwater";
     let templateId = "underwater";
     let preset = "bruma";
+    let motion = "glow";
     let opening = false;
     let pulseUntil = 0;
 
@@ -221,6 +222,13 @@ if (canvas && host && sceneElement) {
       if (presets[event.detail?.preset]) preset = event.detail.preset;
       applyPalette();
     });
+    window.addEventListener("nexo:design", (event) => {
+      const requestedPreset = event.detail?.preset;
+      const requestedMotion = event.detail?.motion;
+      if (presets[requestedPreset]) preset = requestedPreset;
+      if (["glow", "aurora", "pulse", "crystal", "rain"].includes(requestedMotion)) motion = requestedMotion;
+      applyPalette();
+    });
     window.addEventListener("nexo:template", (event) => {
       const id = event.detail?.templateId;
       if (!templateProps[id]) return;
@@ -243,10 +251,17 @@ if (canvas && host && sceneElement) {
       core.rotation.x += delta * 0.2;
       core.rotation.y -= delta * 0.32;
       const corePulse = 0.88 + (Math.sin(elapsed * 1.5) + 1) * 0.12;
-      core.scale.setScalar(corePulse);
+      const designPulse = motion === "pulse" ? 1 + (Math.sin(elapsed * 3.2) + 1) * 0.025 : 1;
+      core.scale.setScalar(corePulse * designPulse);
       coreHalo.material.opacity = 0.12 + (Math.sin(elapsed * 1.4) + 1) * 0.05;
+      if (motion === "aurora") {
+        const hue = (elapsed * 0.035) % 1;
+        keyLight.color.setHSL(hue, 0.78, 0.62);
+        ringMaterials[0].color.setHSL((hue + 0.1) % 1, 0.82, 0.66);
+        coreHalo.material.color.setHSL((hue + 0.28) % 1, 0.76, 0.69);
+      }
       shards.forEach(({ mesh, angle, offset, radius }) => {
-        const orbit = angle + elapsed * 0.12;
+        const orbit = angle + elapsed * (motion === "crystal" ? 0.24 : 0.12);
         mesh.position.x = Math.cos(orbit) * radius;
         mesh.position.y = Math.sin(orbit * 1.3 + offset) * 1.67;
         mesh.rotation.x += delta * (0.22 + offset * 0.01);
@@ -257,16 +272,17 @@ if (canvas && host && sceneElement) {
       const targetY = opening ? -0.55 : 0;
       portal.position.x = THREE.MathUtils.damp(portal.position.x, targetX, 2.2, delta);
       portal.rotation.y = THREE.MathUtils.damp(portal.rotation.y, targetY, 2.2, delta);
-      const pulse = performance.now() < pulseUntil ? 1.08 : 1;
-      const targetScale = opening ? 1.08 : pulse;
+      const cluePulse = performance.now() < pulseUntil ? 1.08 : 1;
+      const targetScale = opening ? 1.08 : cluePulse * designPulse;
       const scale = THREE.MathUtils.damp(portal.scale.x, targetScale, 3, delta);
       portal.scale.setScalar(scale);
 
       const particlePositions = particleGeometry.attributes.position.array;
       for (let index = 0; index < particleCount; index += 1) {
         const y = index * 3 + 1;
-        particlePositions[y] += drift[index] * delta;
+        particlePositions[y] += drift[index] * delta * (motion === "rain" ? -3.2 : 1);
         if (particlePositions[y] > 3.7) particlePositions[y] = -3.7;
+        if (particlePositions[y] < -3.7) particlePositions[y] = 3.7;
       }
       particleGeometry.attributes.position.needsUpdate = true;
       renderer.render(world, camera);
