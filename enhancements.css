@@ -101,6 +101,35 @@
 @media(max-width:1050px){.creation-bar{grid-template-columns:minmax(0,1fr);gap:10px}.creation-copy,.creation-options,.scenario-picker,.ai-status{grid-column:1;grid-row:auto}.creation-options{justify-items:stretch}.creation-options .creation-form{grid-column:1;grid-row:auto;width:100%;max-width:none}.room-mode{justify-self:start}.scenario-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.scenario-picker-heading{align-items:flex-start;flex-direction:column;gap:4px}.ai-status{margin:0}}
 @media(max-width:420px){.scenario-grid{grid-template-columns:1fr}.scenario-card-copy strong{font-size:11px}.scenario-card-copy small{font-size:9px}}
 
+/* Providers for custom rooms: Gemini is the default choice; templates stay free. */
+.ai-provider-options{display:flex;align-items:center;gap:5px;grid-column:1/-1}
+.ai-provider-options[hidden]{display:none!important}
+.ai-provider-options>span{margin-right:3px;color:#a59bb8;font:7px var(--mono);letter-spacing:.08em}
+.provider-option{padding:6px 10px;border:1px solid #746b8554;border-radius:999px;background:#191b24;color:#b7b1c4;font:8px var(--mono);letter-spacing:.05em;cursor:pointer;transition:.18s}
+.provider-option:hover,.provider-option.active{border-color:#9d83eb;background:#33284d;color:#f6f1ff}
+.provider-option.configured:after{content:" · ✓";color:#83e8cf}
+.provider-option:not(.configured){opacity:.76}
+@media(max-width:760px){.ai-provider-options{grid-column:1;flex-wrap:wrap}.ai-provider-options>span{width:100%}}
+
+/* Give every world a recognizable vault silhouette as well as its own palette. */
+.theme-underwater .vault-door{border-radius:50%;border-color:#72d8e4;background:radial-gradient(circle at 35% 25%,#537c8b,#244754 38%,#102b3a 73%,#0d1c2b);box-shadow:0 0 0 9px #0a1822d9,0 0 0 11px #85eaff48,inset 0 0 0 9px #183d4b,inset 0 0 0 13px #78d5d855,inset 0 0 35px #06131c,0 19px 36px #0009}
+.theme-underwater .door-ring{border-color:#a6f8ffb0;box-shadow:0 0 0 5px #143341,0 0 0 7px #8be9f05e,inset 0 0 13px #a5f6ff4d}
+.theme-space .vault-door{clip-path:polygon(16% 0,84% 0,100% 16%,100% 84%,84% 100%,16% 100%,0 84%,0 16%);border-color:#9d92ff;background:linear-gradient(135deg,#6157a2,#302c61 24%,#171b3d 55%,#433a7d 78%,#10162c);box-shadow:0 0 0 9px #11152bd9,0 0 0 11px #b0a1ff52,inset 0 0 0 4px #282850,inset 0 0 38px #0c1029,0 19px 36px #0009}
+.theme-space .door-ring{border-color:#d5afff;box-shadow:0 0 0 4px #201c44,0 0 0 6px #c39cff66,inset 0 0 14px #bc9bff58}
+.theme-mansion .vault-door{clip-path:none;border-radius:50% 50% 5px 5px;border-color:#d18abe;background:linear-gradient(135deg,#724865,#452940 24%,#271b30 58%,#633851 80%,#1c1423);box-shadow:0 0 0 9px #19121fd9,0 0 0 11px #f1abd052,inset 0 0 0 4px #3f263d,inset 0 0 38px #140d1a,0 19px 36px #0009}
+.theme-mansion .door-ring{border-color:#ffd0ee;box-shadow:0 0 0 4px #2b182b,0 0 0 6px #ea9ac66b,inset 0 0 14px #ffc5ed55}
+.theme-jungle .vault-door{clip-path:polygon(10% 0,90% 3%,100% 14%,96% 88%,84% 100%,12% 97%,0 84%,4% 14%);border-radius:12px;border-color:#b7ca65;background:linear-gradient(135deg,#60763c,#384a2d 25%,#202c20 58%,#526334 80%,#192319);box-shadow:0 0 0 9px #111a12d9,0 0 0 11px #cce2784a,inset 0 0 0 5px #354428,inset 0 0 38px #10170f,0 19px 36px #0009}
+.theme-jungle .door-ring{border-color:#e1f298;box-shadow:0 0 0 4px #26331f,0 0 0 6px #bddb6b6b,inset 0 0 14px #e1f29855}
+.theme-lab .vault-door{clip-path:polygon(10% 0,90% 0,100% 10%,100% 90%,90% 100%,10% 100%,0 90%,0 10%);border-color:#63e4dc;background:linear-gradient(135deg,#438b8c,#235c68 25%,#102f3b 58%,#337a83 80%,#102632);box-shadow:0 0 0 9px #0d2025d9,0 0 0 11px #74fff35c,inset 0 0 0 4px #1b4852,inset 0 0 38px #071e27,0 19px 36px #0009}
+.theme-lab .door-ring{border-color:#b0fff5;box-shadow:0 0 0 4px #14343a,0 0 0 6px #70e9e26b,inset 0 0 14px #6dfff066}
+.theme-museum .vault-door{clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);border-color:#e0b76b;background:linear-gradient(135deg,#80663f,#59462d 25%,#30271e 58%,#775c38 80%,#282119);box-shadow:0 0 0 9px #211a12d9,0 0 0 11px #ffd58a50,inset 0 0 0 4px #4f3c29,inset 0 0 38px #17130d,0 19px 36px #0009}
+.theme-museum .door-ring{border-color:#ffe2a3;box-shadow:0 0 0 4px #302518,0 0 0 6px #f3c97870,inset 0 0 13px #ffd88755}
+.theme-arctic .vault-door{clip-path:polygon(50% 0,94% 14%,100% 50%,94% 86%,50% 100%,6% 86%,0 50%,6% 14%);border-color:#9ae6ff;background:linear-gradient(135deg,#668fa9,#39647e 25%,#203e5a 58%,#507c95 80%,#1a334d);box-shadow:0 0 0 9px #112331d9,0 0 0 11px #b0ecff58,inset 0 0 0 4px #345a70,inset 0 0 38px #101f31,0 19px 36px #0009}
+.theme-arctic .door-ring{border-color:#d4f7ff;box-shadow:0 0 0 4px #1d384b,0 0 0 6px #a5edff6b,inset 0 0 14px #a6ecff5c}
+.theme-festival .vault-door{border-radius:24% 24% 14% 14%;border-color:#ff91dc;background:linear-gradient(135deg,#864d92,#573568 25%,#301d4d 58%,#754175 80%,#241738);box-shadow:0 0 0 9px #1b1226d9,0 0 0 11px #ff9be05c,inset 0 0 0 4px #47264e,inset 0 0 38px #180f2a,0 19px 36px #0009}
+.theme-festival .door-ring{border-color:#ffd3f4;box-shadow:0 0 0 4px #321e3d,0 0 0 6px #ff8ee26b,inset 0 0 14px #ffb2e955}
+.theme-generic .vault-door{border-radius:18px;border-color:#8b9fba;background:linear-gradient(135deg,#536b83,#33465e 25%,#1e2d43 58%,#405a72 80%,#182436)}
+
 /* Keep the chat composer in view while the message feed scrolls inside the panel. */
 .chat-panel{height:calc(100vh - 112px);min-height:420px;max-height:calc(100vh - 112px);position:sticky;top:12px}
 .chat-messages{min-height:0;overscroll-behavior:contain}

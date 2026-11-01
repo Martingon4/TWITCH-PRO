@@ -34,14 +34,19 @@ Abre `http://localhost:4173`. No se necesitan paquetes adicionales. Sin credenci
 
 Para que un streamer o compañero recorra la experiencia como usuario, sigue la [guía de prueba de usuario](GUIA-PRUEBA-STREAMER.md). Incluye los flujos demo, Twitch en vivo y OBS, criterios de aceptación y un formato para reportar resultados.
 
-## Activar OpenAI
+## Activar la generación de escenarios con IA
 
-Agrega la clave a `.env` (este archivo está excluido de Git):
+La app permite elegir Gemini u OpenAI para crear situaciones originales. Agrega la clave a `.env` (excluido de Git) en desarrollo, o como variable privada del servicio en Render. Gemini queda seleccionado al abrir el modo IA:
 
 ```env
+GEMINI_API_KEY=tu_clave_de_google_ai_studio
+GEMINI_MODEL=gemini-3.5-flash-lite
+# Alternativa:
 OPENAI_API_KEY=tu_clave
 OPENAI_MODEL=gpt-4.1-mini
 ```
+
+La clave se envía únicamente desde el servidor al proveedor seleccionado; no se incluye en el navegador. Las plantillas permanecen disponibles gratis si no se configura una clave o si el proveedor rechaza la solicitud. La generación con IA puede consumir cuota o créditos de la cuenta de ese proveedor. En Render, guarda `GEMINI_API_KEY` en **Environment** y reinicia/despliega el servicio.
 
 ## Conectar Twitch
 
@@ -100,7 +105,7 @@ Para proteger la escena, los títulos de otras recompensas no ejecutan comandos.
 3. Pulsa **Crear sala** y revisa el dossier para ver el objetivo, los tres objetos y el primer comando.
 4. En el chat, usa `!examinar [objeto]`, después `!resolver [objeto] [respuesta]` para cada pista y finalmente `!codigo [código]`.
 
-La opción **IA · usa créditos** solo debe elegirse si la cuenta de API tiene saldo disponible. Si OpenAI no acepta la solicitud, Nexo entrega una plantilla y explica el motivo.
+La opción **IA · con créditos** permite seleccionar Gemini u OpenAI. La pantalla indica si falta la clave seleccionada y, si el proveedor rechaza la solicitud, Nexo entrega una plantilla y explica el motivo.
 
 Los temas propuestos por el chat se revisan antes de crear una sala. Los usuarios no pueden enviar CSS ni código; solo pueden elegir entre los estilos permitidos. La participación repetida tiene enfriamiento.
 

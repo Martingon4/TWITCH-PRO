@@ -58,6 +58,7 @@
               <div class="creation-options-heading"><span class="step-number">02</span><div><strong>Prepara la sala</strong><small>Las plantillas son gratis. La IA usa créditos de API.</small></div></div>
               <div class="creation-options-controls">
                 <div class="room-mode" role="group" aria-label="Modo de creación"><button class="mode-option active" id="templateModeButton" type="button" aria-pressed="true">PLANTILLA · GRATIS</button><button class="mode-option" id="aiModeButton" type="button" aria-pressed="false">IA · CON CRÉDITOS</button></div>
+                <div class="ai-provider-options" id="aiProviderOptions" role="group" aria-label="Proveedor para generar escenarios" hidden><span>GENERAR CON</span><button class="provider-option active" id="geminiProviderButton" type="button" aria-pressed="true">GEMINI</button><button class="provider-option" id="openaiProviderButton" type="button" aria-pressed="false">OPENAI</button></div>
                 <form class="creation-form" id="roomForm"><label class="sr-only" for="themeInput">Situación propia para generar con IA</label><input id="themeInput" maxlength="120" aria-describedby="creationHint" placeholder="Ej.: una nave perdió energía y el chat debe repararla..."/><button id="generateButton" type="submit">CREAR SALA <span aria-hidden="true">↗</span></button></form>
               </div>
               <p class="creation-hint" id="creationHint">Con una tarjeta seleccionada, pulsa «Crear sala». Para inventar otra situación, elige IA y descríbela aquí.</p>

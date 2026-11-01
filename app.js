@@ -39,7 +39,7 @@
   const state = {
     clues: {}, examined: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
-serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected", streamerId: "", canControl: true,
+serverAvailable: false, aiEnabled: false, aiProviders: { gemini: false, openai: false }, aiProvider: "gemini", twitchConfigured: false, twitchStatus: "disconnected", streamerId: "", canControl: true,
     eventSource: null, devicePoll: null, deviceFlowId: "", restoredChat: false, persistTimer: null, toastTimer: null, eventTimer: null, captionTimer: null, casterTimer: null, reactionTimer: null,
     currentPreset: "bruma", lastRoomKey: "", casterBusy: false, roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "", recentCommands: [],
   };
@@ -565,16 +565,16 @@ card.dataset.mood = mood;
     const noteIsWarning = Boolean(note && !note.startsWith("Modo plantilla:"));
     const roomKey = `${room.title}|${room.code}|${room.opening}|${JSON.stringify(room.clues)}`;
     if (roomKey === state.lastRoomKey) {
-      const generatedWithAI = room.source === "openai";
+      const generatedWithAI = ["openai", "gemini"].includes(room.source);
       const sourceBadge = $("roomSourceBadge");
-      sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
+      sourceBadge.textContent = generatedWithAI ? `GENERADA CON ${room.source.toUpperCase()}` : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
       sourceBadge.classList.toggle("source-ai", generatedWithAI);
       sourceBadge.classList.toggle("source-template", !generatedWithAI);
       const noteElement = $("roomGenerationNote");
       noteElement.hidden = false;
       noteElement.classList.toggle("warning", noteIsWarning);
       noteElement.textContent = note || (generatedWithAI
-        ? "OpenAI creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos."
+        ? `${room.source === "gemini" ? "Gemini" : "OpenAI"} creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos.`
         : "Plantilla lista para jugar: escenario, acertijos, respuestas y combinación ya definidos. No se usaron créditos de API.");
       return;
     }
@@ -602,8 +602,8 @@ card.dataset.mood = mood;
     const themeAtmospheres = { space: "Órbita exterior", mansion: "Mansión espectral", jungle: "Templo de la selva", lab: "Laboratorio secreto", underwater: "Abismo oceánico", museum: "Museo cerrado", arctic: "Estación polar", festival: "Escenario en vivo", generic: "Cámara misteriosa" };
     $("roomEnvironmentFact").textContent = `Atmósfera · ${themeAtmospheres[visualTheme] || environmentNames[room.environment] || environmentNames.underwater}`;
     const sourceBadge = $("roomSourceBadge");
-    const generatedWithAI = room.source === "openai";
-    sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
+    const generatedWithAI = ["openai", "gemini"].includes(room.source);
+    sourceBadge.textContent = generatedWithAI ? `GENERADA CON ${room.source.toUpperCase()}` : `PLANTILLA · ${room.templateLabel || "JUGABLE"}`;
     sourceBadge.classList.toggle("source-ai", generatedWithAI);
     sourceBadge.classList.toggle("source-template", !generatedWithAI);
     const objectList = $("roomObjectList");
@@ -631,7 +631,7 @@ card.dataset.mood = mood;
     generationNote.hidden = false;
     generationNote.classList.toggle("warning", noteIsWarning);
     generationNote.textContent = note || (generatedWithAI
-      ? "OpenAI creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos."
+      ? `${room.source === "gemini" ? "Gemini" : "OpenAI"} creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos.`
       : "Plantilla lista para jugar: escenario, acertijos, respuestas y combinación ya definidos. No se usaron créditos de API.");
     renderObjectLabels();
     $("sceneHint").textContent = "Examinen cada objeto, resuelvan sus acertijos y prueben el código final.";
@@ -639,11 +639,11 @@ card.dataset.mood = mood;
     if (note) showToast(note);
     resetGame(false);
     showCaption(room.opening);
-    const generatedMessage = room.source === "openai"
-      ? `Sala «${room.title}» generada con OpenAI. ${room.summary || room.opening} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")} en el chat.`
+    const generatedMessage = ["openai", "gemini"].includes(room.source)
+      ? `Sala «${room.title}» generada con ${room.source === "gemini" ? "Gemini" : "OpenAI"}. ${room.summary || room.opening} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")} en el chat.`
       : `Sala «${room.title}» lista · ${room.templateLabel || "plantilla jugable"}. ${room.summary || room.opening} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")} en el chat.`;
     addMessage({ user: "NEXO · MISIÓN", text: generatedMessage, system: true, good: true });
-    showEvent(room.source === "openai" ? "Sala generada con OpenAI · mira el dossier" : `Plantilla jugable · ${room.templateLabel || "aventura"}`);
+    showEvent(["openai", "gemini"].includes(room.source) ? `Sala generada con ${room.source === "gemini" ? "Gemini" : "OpenAI"} · mira el dossier` : `Plantilla jugable · ${room.templateLabel || "aventura"}`);
   }
 
   function resetGame(showMessage = true) {
@@ -735,15 +735,15 @@ card.dataset.mood = mood;
     $("roomGenerationNote").hidden = false;
     $("roomGenerationNote").classList.remove("warning");
     $("roomGenerationNote").textContent = state.roomMode === "ai"
-      ? "Se enviará esta situación a OpenAI. La generación consume créditos de la API; si no hay saldo, se cargará una plantilla jugable."
-      : "Preparando una sala del catálogo local. Esta opción no llama a OpenAI ni consume créditos.";
+      ? `Se enviará esta situación a ${state.aiProvider === "gemini" ? "Gemini" : "OpenAI"}. La generación puede consumir cuota o créditos de esa API; si falla, se cargará una plantilla jugable.`
+      : "Preparando una sala del catálogo local. Esta opción no llama a Gemini ni OpenAI y no consume cuota de API.";
     $("roomSourceBadge").textContent = state.roomMode === "ai" ? "GENERANDO SALA…" : "CARGANDO PLANTILLA…";
     $("roomSourceBadge").classList.remove("source-ai", "source-template");
     try {
-      const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt, mode: state.roomMode, templateId: state.selectedTemplateId }) });
+      const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt, mode: state.roomMode, templateId: state.selectedTemplateId, provider: state.aiProvider }) });
       state.serverAvailable = true;
       applyRoom(result.room, result.note);
-      if (result.room?.source === "openai") requestCaster("room");
+      if (["openai", "gemini"].includes(result.room?.source)) requestCaster("room");
       $("themeInput").value = "";
     } catch (error) {
       let room;
@@ -772,6 +772,11 @@ card.dataset.mood = mood;
     state.twitchStatus = payload.twitch.status;
     state.streamerId = payload.twitch.id || state.streamerId;
     state.aiEnabled = Boolean(payload.ai?.enabled);
+    state.aiProviders = {
+      gemini: Boolean(payload.ai?.providers?.gemini?.configured),
+      openai: Boolean(payload.ai?.providers?.openai?.configured),
+    };
+    updateAIProviderControls();
     const chip = $("connectionState");
     chip.classList.remove("connected", "connecting", "waiting", "error");
     const status = state.twitchStatus;
@@ -800,8 +805,8 @@ card.dataset.mood = mood;
     const ai = $("aiStatus");
     ai.classList.toggle("ready", true);
     const aiText = state.roomMode === "ai"
-      ? `IA SELECCIONADA · REQUIERE CRÉDITOS${state.aiEnabled ? " DE API" : " Y CLAVE DE API"}`
-      : state.aiEnabled ? "PLANTILLAS SIN COSTO · IA OPCIONAL" : "PLANTILLAS SIN COSTO · IA NO CONFIGURADA";
+      ? `IA ${state.aiProvider.toUpperCase()} · ${state.aiProviders[state.aiProvider] ? "LISTA · PUEDE CONSUMIR CUOTA" : `FALTA ${state.aiProvider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY"}`}`
+      : "PLANTILLAS GRATIS · SIN CONSUMO DE API";
     ai.innerHTML = `<span class="ai-indicator"></span>${aiText}`;
   }
 
@@ -965,11 +970,30 @@ card.dataset.mood = mood;
     $("templateModeButton").setAttribute("aria-pressed", String(!isAI));
     $("aiModeButton").setAttribute("aria-pressed", String(isAI));
     $("generateButton").innerHTML = isAI ? "CREAR CON IA <span>↗</span>" : "CREAR SALA <span>↗</span>";
-    const statusText = isAI ? "ATENCIÓN · IA CONSUME CRÉDITOS DE API" : state.aiEnabled ? "PLANTILLAS SIN COSTO · IA OPCIONAL" : "PLANTILLAS SIN COSTO · IA NO CONFIGURADA";
+    $("aiProviderOptions").hidden = !isAI;
+    const statusText = isAI
+      ? `IA ${state.aiProvider.toUpperCase()} · ${state.aiProviders[state.aiProvider] ? "LISTA · PUEDE CONSUMIR CUOTA" : `FALTA ${state.aiProvider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY"}`}`
+      : "PLANTILLAS GRATIS · SIN CONSUMO DE API";
     $("aiStatus").innerHTML = `<span class="ai-indicator"></span>${statusText}`;
+  }
+  function updateAIProviderControls() {
+    for (const provider of ["gemini", "openai"]) {
+      const button = $(`${provider}ProviderButton`);
+      button.classList.toggle("active", state.aiProvider === provider);
+      button.setAttribute("aria-pressed", String(state.aiProvider === provider));
+      button.classList.toggle("configured", state.aiProviders[provider]);
+      button.title = state.aiProviders[provider] ? "API configurada en el servidor" : `Falta configurar ${provider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY"} en Render`;
+    }
+  }
+  function selectAIProvider(provider) {
+    state.aiProvider = provider === "openai" ? "openai" : "gemini";
+    updateAIProviderControls();
+    if (state.roomMode === "ai") selectRoomMode("ai");
   }
   $("templateModeButton").addEventListener("click", () => selectRoomMode("template"));
   $("aiModeButton").addEventListener("click", () => selectRoomMode("ai"));
+  $("geminiProviderButton").addEventListener("click", () => selectAIProvider("gemini"));
+  $("openaiProviderButton").addEventListener("click", () => selectAIProvider("openai"));
   document.querySelectorAll("[data-template]").forEach((button) => button.addEventListener("click", () => {
     const previousLabel = state.selectedTemplateLabel;
     const currentInput = $("themeInput").value.trim();
