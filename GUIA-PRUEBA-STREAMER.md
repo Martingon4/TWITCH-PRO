@@ -5,10 +5,12 @@ Nexo convierte la sala del streamer en un escape room cooperativo. El streamer p
 ## Enlaces
 
 - Demo pública sin contraseña: https://twitch-pro.onrender.com/demo
-- Panel privado del streamer: https://twitch-pro.onrender.com/
+- Panel privado del streamer: https://twitch-pro.onrender.com/ (inicia sesión con Twitch)
 - Código de la versión desplegada: https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 
-La demo pública funciona como simulación local en el navegador. Usa plantillas gratuitas, no conecta una cuenta de Twitch, no llama a Gemini/OpenAI y no guarda el progreso. El panel principal está protegido y es el que se usa para conectar un canal real.
+En la pantalla inicial elige Streamer para autorizar tu canal con Twitch, o Espectador para entrar a la simulación pública. Twitch muestra afiliación/partner y estado en vivo, pero no puede detectar a todos los streamers: los canales no afiliados o fuera de línea también pueden elegir Streamer.
+
+La demo pública funciona como simulación local en el navegador. Usa plantillas gratuitas, no conecta una cuenta de Twitch, no llama a Gemini/OpenAI y no guarda el progreso. El panel principal usa autorización individual de Twitch para conectar el canal.
 
 ## A. Probar como espectador, sin instalar nada
 
@@ -25,22 +27,21 @@ En esta página, los comandos no se publican en Twitch. Es una demo para que cua
 
 ### Antes de comenzar
 
-- Abre el panel principal de Render y usa la contraseña privada del panel.
+- Abre el panel principal y elige **Iniciar sesión con Twitch** para autorizar el canal.
 - El dueño del canal de prueba debe tener acceso a la aplicación de Twitch y aprobar el flujo de código de dispositivo.
 - Usa una segunda cuenta como espectador para escribir comandos reales en el chat del canal.
 - Node.js 22+ y una instalación local solo hacen falta si se prueba desde el código fuente.
 
-No publiques la contraseña del panel, enlaces de overlay, códigos de activación, tokens ni claves de API. Nexo no necesita que el espectador autorice la aplicación; solo el streamer conecta el canal.
+No publiques enlaces de overlay, códigos de activación, tokens ni claves de API. Los espectadores del directo participan desde el chat de Twitch; no necesitan iniciar sesión en Nexo.
 
 ### Conectar y empezar una partida
 
-1. Abre https://twitch-pro.onrender.com/ e inicia sesión.
-2. Pulsa **Conectar Twitch**. Abre Twitch Activate y autoriza los permisos de lectura solicitados.
-3. Espera a que el panel muestre el canal conectado.
-4. Elige un escenario o escribe una situación y pulsa **Crear sala**. El modo **Plantilla · gratis** no consume créditos. **IA · con créditos** usa el proveedor seleccionado y puede generar cargos/cuota.
-5. En OBS, añade una **Fuente de navegador** y pega la URL privada que copia el botón de overlay del panel conectado. No uses `localhost` en OBS si Render aloja la app.
-6. Desde la segunda cuenta de Twitch, prueba los comandos que aparecen en el panel, por ejemplo `!examinar [objeto]` y `!resolver [objeto] [respuesta]`.
-7. Completa las tres pistas y escribe el código indicado por la sala para abrir la bóveda. Prueba también `!estilo ...`, `!reacciona` y `!tema ...`.
+1. Abre https://twitch-pro.onrender.com/ y pulsa **Iniciar sesión con Twitch**. Abre Twitch Activate y autoriza los permisos de lectura solicitados.
+2. Espera a que el panel muestre el canal conectado. La sesión queda ligada a esa cuenta de Twitch.
+3. Elige un escenario o escribe una situación y pulsa **Crear sala**. El modo **Plantilla · gratis** no consume créditos. **IA · con créditos** usa el proveedor seleccionado y puede generar cargos/cuota.
+4. En OBS, añade una **Fuente de navegador** y pega la URL privada que copia el botón de overlay del panel conectado. No uses `localhost` en OBS si Render aloja la app.
+5. Desde la segunda cuenta de Twitch, prueba los comandos que aparecen en el panel, por ejemplo `!examinar [objeto]` y `!resolver [objeto] [respuesta]`.
+6. Completa las tres pistas y escribe el código indicado por la sala para abrir la bóveda. Prueba también `!estilo ...`, `!reacciona` y `!tema ...`.
 
 La propuesta `!tema ...` se envía al panel para que el streamer la revise; no crea una sala automáticamente. Mimo se muestra en el panel/overlay y no escribe mensajes en el chat de Twitch.
 
@@ -58,7 +59,7 @@ El streamer debe crear en Twitch recompensas personalizadas con estos nombres ex
 2. Crea una sala y envía comandos en cada canal.
 3. Comprueba que las salas, progreso y chat de cada canal no se mezclen.
 
-La aplicación separa el estado por Twitch User ID y persiste los tokens cifrados en PostgreSQL. El acceso al panel en este prototipo usa una contraseña compartida; cada streamer vincula su propio canal de Twitch.
+La aplicación separa el estado por Twitch User ID y persiste los tokens cifrados en PostgreSQL. Cada streamer inicia sesión con su propia cuenta de Twitch. La API muestra afiliación/partner para algunas cuentas, pero no identifica a todos los streamers; por eso una cuenta offline o sin afiliación también puede elegir el flujo de streamer. Los espectadores usan la demo pública sin autorizar la aplicación.
 
 ## Lista de aceptación
 
@@ -86,7 +87,7 @@ Captura (oculta códigos, nombres privados y credenciales):
 ## Límites conocidos
 
 - La demo pública es una simulación local, sin conexión Twitch ni persistencia.
-- El panel de streamer requiere la contraseña compartida y autorización individual de Twitch.
+- El panel de streamer requiere autorización individual de Twitch. Los espectadores usan la demo pública sin iniciar sesión.
 - Las claves de IA pertenecen a la cuenta configurada en Render y las generaciones pueden consumir cuota.
 - Los mensajes de chat enviados a Mimo pueden incluirse en el contexto de la API; no envíes información privada.
 - Nexo facilita participación y contenido compartido, pero no demuestra por sí solo un aumento de audiencia o visualizaciones.

@@ -2,8 +2,8 @@
 
 Nexo turns a Twitch stream into a cooperative escape room. The streamer sets up a scenario; viewers investigate clues, solve puzzles, unlock a vault, trigger visual styles, and ask Mimo—the visual Co-Caster—to react. The project was built with OpenAI Codex and connects to Twitch chat and EventSub, with a Three.js overlay for OBS.
 
-- **Public, no-login demo:** https://twitch-pro.onrender.com/demo
-- **Streamer dashboard:** https://twitch-pro.onrender.com/ (protected by the private shared dashboard password)
+- **Streamer dashboard:** https://twitch-pro.onrender.com/ (sign in with Twitch and authorize your channel)
+- **Viewer demo:** https://twitch-pro.onrender.com/demo (free public simulation; live viewers participate through Twitch chat)
 - **Deployed source branch:** https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 - **Submission materials:** [Devpost draft and video outline](DEVPOST-SUBMISSION.md)
 - **Video script:** [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md)
@@ -53,16 +53,16 @@ AI generation can consume the configured provider's quota or credits. Template m
 
 1. Create a Twitch Developer application and set TWITCH_CLIENT_ID.
 2. Set the Twitch client ID in the local .env or the Render environment.
-3. Open the local dashboard (no hosted password is needed locally) or sign into the protected hosted dashboard, then select **Connect Twitch**.
+3. On Render, choose **Sign in with Twitch**; locally, configure the Twitch app and authorize through the dashboard.
 4. The channel owner completes Twitch's device authorization flow and approves the requested read scopes.
 5. Use a second Twitch account to send a command in the channel chat.
 6. Copy the private overlay URL from the dashboard into an OBS Browser Source.
 
-Each streamer authorizes their own channel. The current prototype uses one shared dashboard password, while channel data is separated by Twitch User ID.
+Each streamer signs in with and authorizes their own Twitch account. Twitch can identify Partner/Affiliate accounts and whether a channel is live at that moment; an offline or unaffiliated account can still be a streamer, so the sign-in screen lets the visitor choose the role. The dashboard session is bound to that Twitch User ID; channel data is separated by Twitch User ID. Viewers can try the public simulation without an account and join live games through Twitch chat.
 
 ## Render deployment
 
-The Render Blueprint is in render.yaml. Production requires APP_PASSWORD, APP_SESSION_SECRET, DATABASE_URL, and TOKEN_ENCRYPTION_KEY; the Blueprint generates the session and encryption keys and links PostgreSQL. Add TWITCH_CLIENT_ID, plus optional GEMINI_API_KEY or OPENAI_API_KEY, in Render's private Environment settings.
+The Render Blueprint is in render.yaml. Production requires APP_SESSION_SECRET, DATABASE_URL, and TOKEN_ENCRYPTION_KEY; the Blueprint generates the session and encryption keys and links PostgreSQL. Add TWITCH_CLIENT_ID, plus optional GEMINI_API_KEY or OPENAI_API_KEY, in Render's private Environment settings.
 
 Render's free web instance may sleep between visits. Check current Render database retention and service limits before using it beyond the hackathon.
 

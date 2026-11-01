@@ -2,8 +2,8 @@
 
 Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room en vivo. El streamer revisa las ideas de tema, el chat busca pistas y puede rediseñar la escena con comandos de estilo seguros. Mimo —el Co-Caster visual— cambia de expresión y reacciona a los momentos de la partida. El proyecto se desarrolló con OpenAI Codex y conecta la experiencia a Twitch mediante chat, EventSub y un overlay para OBS.
 
-- **Demo pública sin contraseña:** https://twitch-pro.onrender.com/demo (simulación gratuita con plantillas; no conecta Twitch ni consume API).
-- **Panel privado del streamer:** https://twitch-pro.onrender.com/ (requiere la contraseña privada del panel).
+- **Panel del streamer:** https://twitch-pro.onrender.com/ (inicia sesión con Twitch y autoriza tu canal).
+- **Acceso de espectador:** https://twitch-pro.onrender.com/demo (simulación pública con plantillas gratuitas; en un directo real, los espectadores participan desde el chat de Twitch).
 - **Rama de código desplegada:** https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render. El servicio de Render sigue esta rama; usa este enlace para revisar la versión actual.
 - **Documentación de entrega en inglés:** [README.en.md](README.en.md), [USER-TEST-GUIDE.en.md](USER-TEST-GUIDE.en.md), [DEVPOST-SUBMISSION.md](DEVPOST-SUBMISSION.md) y [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md).
 
@@ -20,7 +20,7 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 
 En el modo de IA, el modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat.
 
-Cada autorización identifica un canal por su Twitch User ID. PostgreSQL separa por ese ID la sala activa, el progreso, hasta siete días del chat, los tokens cifrados y los eventos recientes. El panel recupera los últimos 60 mensajes. Los eventos se comparten entre instancias del servidor; un arrendamiento por canal evita sockets duplicados y una sesión controladora evita que dos pestañas ejecuten el mismo comando.
+Cada autorización identifica un canal por su Twitch User ID. PostgreSQL separa por ese ID la sala activa, el progreso, hasta siete días del chat, los tokens cifrados y los eventos recientes. El panel recupera los últimos 60 mensajes. En el acceso, selecciona streamer para autorizar el canal o espectador para abrir la demo pública. Los eventos se comparten entre instancias del servidor; un arrendamiento por canal evita sockets duplicados y una sesión controladora evita que dos pestañas ejecuten el mismo comando.
 
 ## Requisitos y arranque
 
@@ -65,8 +65,8 @@ La clave se envía únicamente desde el servidor al proveedor seleccionado; no s
 
 1. Registra una aplicación en [Twitch Developer Console](https://dev.twitch.tv/console/apps) y copia el Client ID a `.env` como `TWITCH_CLIENT_ID`.
 2. Si el formulario pide OAuth Redirect URL, registra `http://localhost:4173`.
-3. Reinicia el servidor, pulsa **Conectar Twitch** y autoriza el código en Twitch Activate.
-4. Autoriza los permisos de lectura de chat y canjes. Si ya habías conectado Nexo antes de esta versión, desconecta y vuelve a autorizar para agregar el permiso de puntos.
+3. En Render, pulsa **Iniciar sesión con Twitch** y autoriza el código en Twitch Activate. Eso autentica y conecta el canal.
+4. Autoriza los permisos de lectura de chat y canjes. Si ya habías conectado Nexo antes de esta versión, vuelve a iniciar sesión para agregar el permiso de puntos.
 5. EventSub se suscribe a los mensajes y a los canjes de recompensas personalizadas. En producción, Nexo cifra los tokens en PostgreSQL y los renueva al reconectar. Si tu canal no puede usar puntos o Twitch rechaza esa suscripción, el chat sigue conectado y las recompensas no estarán disponibles.
 
 ## Publicar para una prueba en línea
@@ -74,15 +74,14 @@ La clave se envía únicamente desde el servidor al proveedor seleccionado; no s
 El archivo `render.yaml` prepara Nexo como un servicio web de Node en Render. Crea un Blueprint desde el repositorio y completa las variables marcadas como secretas en el panel de Render. Render requiere que un servicio público escuche en `0.0.0.0`; el manifiesto también establece ese host y la ruta de salud. Render Web Services permite conexiones WebSocket salientes, que Nexo necesita para EventSub de Twitch ([documentación de WebSockets](https://render.com/docs/websocket)).
 
 - `TWITCH_CLIENT_ID`: Client ID de la app de Twitch. Nexo usa el flujo de código de dispositivo y no requiere el Client Secret.
-- `APP_PASSWORD`: contraseña compartida para que solo el streamer y los testers abran el panel.
-- `APP_SESSION_SECRET`: Render lo genera automáticamente al crear el Blueprint y firma las sesiones.
+- `APP_SESSION_SECRET`: Render lo genera automáticamente al crear el Blueprint y firma las sesiones de Twitch.
 - `TOKEN_ENCRYPTION_KEY`: Render genera una clave para cifrar los tokens de Twitch guardados en PostgreSQL. No la cambies después de guardar autorizaciones, o los tokens tendrán que volver a conectarse.
 - `DATABASE_URL`: URL interna de PostgreSQL; el Blueprint la enlaza con `twitch-pro-data`.
 - `TWITCH_CLIENT_SECRET`: opcional si la app de Twitch está configurada como cliente público; es necesario para refrescar tokens de algunos clientes confidenciales.
 - `OPENAI_API_KEY`: opcional para el modo de IA, que crea acertijos únicos y consume créditos de la API. Las plantillas funcionan sin esa clave.
 - `GEMINI_API_KEY`: opcional; se configura en Render para activar la generación con Gemini.
 
-Cada streamer inicia sesión en el panel y conecta su propio canal desde **Conectar Twitch**. Al autorizarlo, la app liga el panel a esa cuenta; sus salas, chat y comandos no se mezclan con los de otros canales. Usa **Copiar enlace del overlay** para obtener una dirección privada de OBS que apunta al canal conectado.
+Cada streamer inicia sesión autorizando su propia cuenta de Twitch. La API permite identificar Partner/Affiliate y consultar si transmite en ese momento; una cuenta offline o sin afiliación también puede ser streamer, así que el acceso permite elegir explícitamente el rol. El panel queda ligado a ese Twitch User ID; sus salas, chat y comandos no se mezclan con los de otros canales. Los espectadores pueden probar la simulación sin iniciar sesión y, en un directo, participan desde el chat. Usa **Copiar enlace del overlay** para obtener una dirección privada de OBS que apunta al canal conectado.
 
 El Blueprint usa PostgreSQL gratuito para una prueba. Render elimina el acceso a esa base a los 30 días; antes de ese plazo, actualízala a un plan persistente y verifica que el servicio web también tenga un plan que permita escalar. Los servicios web gratuitos no admiten varias instancias. PostgreSQL conserva tokens cifrados y datos después de reinicios, pero un despliegue a gran escala requiere planes pagos, backups y monitoreo. No subas `.env` al repositorio. Consulta las [limitaciones actuales del plan gratuito](https://render.com/docs/free) y la [configuración de Blueprints](https://render.com/docs/blueprint-spec).
 

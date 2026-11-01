@@ -19,9 +19,8 @@ const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-const APP_PASSWORD = process.env.APP_PASSWORD || "";
 const APP_SESSION_SECRET = process.env.APP_SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : randomUUID());
-const authEnabled = Boolean(APP_PASSWORD && APP_SESSION_SECRET);
+const authEnabled = process.env.NODE_ENV === "production" && Boolean(APP_SESSION_SECRET);
 const TWITCH_SCOPES = ["user:read:chat", "channel:read:redemptions"];
 const EVENTSUB_URL = "wss://eventsub.wss.twitch.tv/ws";
 const staticFiles = new Map([
@@ -68,8 +67,8 @@ function constantTimeStringEqual(left, right) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-function sessionSignature(expiresAt) {
-  return createHmac("sha256", APP_SESSION_SECRET).update(String(expiresAt)).digest("base64url");
+function sessionSignature(streamerId, expiresAt) {
+  return createHmac("sha256", APP_SESSION_SECRET).update(`dashboard:${streamerId}:${expiresAt}`).digest("base64url");
 }
 
 function streamerSignature(streamerId, expiresAt) {
@@ -90,9 +89,14 @@ function signedStreamerId(req) {
 
 function hasDashboardSession(req) {
   if (!authEnabled) return true;
-  const [expiresAt, signature] = (readCookies(req).nexo_session || "").split(".");
+  const [streamerId, expiresAt, signature] = (readCookies(req).nexo_session || "").split(".");
   const expiry = Number(expiresAt);
-  return Number.isFinite(expiry) && expiry > Math.floor(Date.now() / 1000) && constantTimeStringEqual(signature || "", sessionSignature(expiresAt));
+  return /^\d+$/.test(streamerId) && Number.isFinite(expiry) && expiry > Math.floor(Date.now() / 1000) && constantTimeStringEqual(signature || "", sessionSignature(streamerId, expiresAt));
+}
+
+function dashboardSessionStreamerId(req) {
+  if (!hasDashboardSession(req)) return null;
+  return (readCookies(req).nexo_session || "").split(".")[0] || null;
 }
 
 async function streamerForRequest(req, url) {
@@ -104,6 +108,7 @@ async function streamerForRequest(req, url) {
     return constantTimeStringEqual(signature, overlaySignature(APP_SESSION_SECRET, streamer.id)) ? streamer : null;
   }
   const id = signedStreamerId(req);
+  if (authEnabled && id !== dashboardSessionStreamerId(req)) return null;
   return id ? getStreamer(id) : null;
 }
 
@@ -122,7 +127,7 @@ async function readForm(req, limit = 2_000) {
   return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
 }
 
-const loginPage = (message = "") => `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexo · Acceso</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e1211;color:#edf2e8;font:16px system-ui,sans-serif}.card{width:min(390px,calc(100% - 40px));padding:30px;border:1px solid #394237;border-radius:8px;background:#171d1a;box-sizing:border-box}h1{margin:0 0 8px;font-size:25px}p{color:#aeb7ad;line-height:1.5}label{display:block;margin:20px 0 7px;color:#c8d1c4;font-size:13px}input,button{width:100%;height:44px;box-sizing:border-box;border-radius:5px;font:inherit}input{padding:0 12px;border:1px solid #475344;background:#101513;color:#fff}button{margin-top:12px;border:0;background:#c6f36a;color:#172011;font-weight:700;cursor:pointer}.error{color:#ffb4a8;font-size:13px}</style></head><body><main class="card"><h1>NEXO</h1><p>Panel privado de streamer. Ingresa la contraseña de acceso para abrir la experiencia.</p>${message ? `<p class="error">${message}</p>` : ""}<form method="post" action="/login"><label for="password">Contraseña del panel</label><input id="password" name="password" type="password" autocomplete="current-password" required autofocus><button type="submit">ENTRAR</button></form></main></body></html>`;
+const loginPage = () => `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Nexo · Acceso</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 0,#27382e 0,transparent 55%),#0e1211;color:#edf2e8;font:16px system-ui,sans-serif}.card{width:min(440px,100%);padding:32px;border:1px solid #394237;border-radius:18px;background:#171d1a;box-shadow:0 24px 80px #0008}h1{margin:0 0 8px;font-size:30px;letter-spacing:.12em}p{color:#aeb7ad;line-height:1.55}.choice{margin-top:24px;padding:18px;border:1px solid #394237;border-radius:12px}.choice h2{font-size:16px;margin:0 0 6px}.choice p{font-size:14px;margin:0 0 14px}.button{display:flex;width:100%;min-height:48px;align-items:center;justify-content:center;border:0;border-radius:8px;background:#c6f36a;color:#172011;font:700 14px system-ui;cursor:pointer;text-decoration:none}.button.secondary{background:#252e28;color:#e4ebdf;border:1px solid #455144}.button:disabled{opacity:.6;cursor:wait}.status{min-height:24px;margin-top:14px;font-size:14px;color:#c6f36a}.status.error{color:#ffb4a8}.code{font-size:25px;font-weight:800;letter-spacing:.2em;color:#fff}.activate{color:#c6f36a}.hidden{display:none}.foot{font-size:12px;margin-top:20px}</style></head><body><main class="card"><h1>NEXO</h1><p>Elige cómo quieres entrar. Twitch confirma la cuenta del streamer; la API no puede identificar como streamer a todos los canales pequeños u offline.</p><section class="choice"><h2>Streamer</h2><p>Inicia sesión con Twitch y autoriza el chat y los canjes para abrir tu panel privado.</p><button class="button" id="twitchLogin" type="button">INICIAR SESIÓN CON TWITCH</button><div id="authDetails" class="hidden"><p>Abre <a id="activateLink" class="activate" target="_blank" rel="noopener">Twitch Activate</a> e ingresa este código:</p><div id="userCode" class="code"></div></div><div id="authStatus" class="status" role="status" aria-live="polite"></div></section><section class="choice"><h2>Espectador</h2><p>Prueba las salas y comandos en la simulación pública, sin conectar una cuenta.</p><a class="button secondary" href="/demo">ENTRAR COMO ESPECTADOR</a></section><p class="foot">La autorización de Twitch se usa para conectar tu canal. Nexo no recibe tu contraseña de Twitch.</p><script>const button=document.querySelector('#twitchLogin'),status=document.querySelector('#authStatus'),details=document.querySelector('#authDetails'),code=document.querySelector('#userCode'),link=document.querySelector('#activateLink');let timer=null,flowId='';async function call(url,options={}){const response=await fetch(url,{...options,headers:{'content-type':'application/json',...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo iniciar la sesión.');return data}button.addEventListener('click',async()=>{button.disabled=true;status.classList.remove('error');status.textContent='Solicitando autorización segura a Twitch…';try{const flow=await call('/api/auth/twitch/device',{method:'POST',body:'{}'});flowId=flow.id;code.textContent=flow.userCode;link.href=flow.verificationUri||'https://www.twitch.tv/activate';details.classList.remove('hidden');status.textContent='Autoriza la cuenta de Twitch que administrará el canal.';timer=window.setInterval(poll,Math.max(4000,(flow.interval||5)*1000));poll()}catch(error){status.textContent=error.message;status.classList.add('error');button.disabled=false}});async function poll(){try{const result=await call('/api/auth/twitch/device/status?id='+encodeURIComponent(flowId));if(result.status==='authorized'){clearInterval(timer);const account=result.account||{};if(account.broadcasterType==='partner'||account.broadcasterType==='affiliate')status.textContent='Twitch reconoce esta cuenta como '+account.broadcasterType+'. Abriendo tu panel…';else if(account.isLive)status.textContent='Twitch confirma que el canal está en vivo. Abriendo tu panel…';else status.textContent='Twitch no muestra una transmisión en vivo ni una afiliación. Puedes continuar como streamer aunque transmitas offline. Abriendo tu panel…';window.location.assign('/');return}if(['expired','failed'].includes(result.status)){clearInterval(timer);throw new Error(result.error||'La autorización terminó.')} }catch(error){clearInterval(timer);status.textContent=error.message;status.classList.add('error');button.disabled=false}}</script></main></body></html>`;
 
 function publicStatus(streamer = null, room = null, gameState = null, chat = []) {
   const connection = streamer ? twitchConnections.get(streamer.id) : null;
@@ -405,7 +410,11 @@ async function startDeviceFlow() {
 async function pollDeviceFlow(id) {
   let flow = await getDeviceFlow(id);
   if (!flow) throw Object.assign(new Error("La autorización ya no existe o venció."), { status: 404 });
-  if (flow.status !== "pending") return { status: flow.status, error: flow.error, streamerId: flow.streamerId || null };
+  if (flow.status !== "pending") {
+    const streamer = flow.streamerId ? await getStreamer(flow.streamerId) : null;
+    const account = streamer ? await twitchAccountDetails(streamer, streamer.accessToken).catch(() => null) : null;
+    return { status: flow.status, error: flow.error, streamerId: flow.streamerId || null, account };
+  }
   if (Date.now() >= flow.expiresAt) {
     await updateDeviceFlow(id, { status: "expired", error: "El código expiró. Inicia la conexión de nuevo." });
     return { status: "expired", error: "El código expiró. Inicia la conexión de nuevo." };
@@ -425,7 +434,8 @@ async function pollDeviceFlow(id) {
     const streamer = await upsertStreamer(user, token);
     await updateDeviceFlow(id, { status: "authorized", error: null, streamerId: streamer.id });
     await connectEventSub(streamer.id);
-    return { status: "authorized", streamerId: streamer.id };
+    const account = await twitchAccountDetails(user, token.access_token).catch(() => ({ broadcasterType: user.broadcaster_type || "", isLive: null }));
+    return { status: "authorized", streamerId: streamer.id, account };
   } catch (error) {
     const code = error.body?.message || error.body?.error || "";
     if (code === "authorization_pending") return { status: "pending" };
@@ -441,6 +451,11 @@ async function pollDeviceFlow(id) {
 
 function twitchHeaders(accessToken) {
   return { "client-id": process.env.TWITCH_CLIENT_ID, authorization: `Bearer ${accessToken}`, "content-type": "application/json" };
+}
+
+async function twitchAccountDetails(user, accessToken) {
+  const live = await fetchJson(`https://api.twitch.tv/helix/streams?user_id=${encodeURIComponent(user.id)}`, { headers: twitchHeaders(accessToken) });
+  return { broadcasterType: user.broadcaster_type || "", isLive: Array.isArray(live.data) && live.data.length > 0 };
 }
 
 async function ensureFreshToken(streamerId) {
@@ -579,22 +594,15 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true });
     if (authEnabled && url.pathname === "/login" && req.method === "GET") {
+      if (hasDashboardSession(req)) {
+        res.writeHead(303, { location: "/", "cache-control": "no-store" });
+        return res.end();
+      }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       return res.end(loginPage());
     }
-    if (authEnabled && url.pathname === "/login" && req.method === "POST") {
-      const form = await readForm(req);
-      if (!constantTimeStringEqual(form.get("password") || "", APP_PASSWORD)) {
-        res.writeHead(401, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-        return res.end(loginPage("La contraseña no es correcta."));
-      }
-      const expiresAt = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
-      const secure = req.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
-      res.writeHead(303, { location: "/", "set-cookie": `nexo_session=${expiresAt}.${sessionSignature(expiresAt)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200${secure}`, "cache-control": "no-store" });
-      return res.end();
-    }
     if (authEnabled && url.pathname === "/logout" && req.method === "POST") {
-      res.writeHead(303, { location: "/login", "set-cookie": "nexo_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0", "cache-control": "no-store" });
+      res.writeHead(303, { location: "/login", "set-cookie": ["nexo_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0", "nexo_streamer=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"], "cache-control": "no-store" });
       return res.end();
     }
 
@@ -603,7 +611,8 @@ const server = createServer(async (req, res) => {
     if (authEnabled && overlayPage && !await hasOverlayAccess(url)) {
       return json(res, 401, { error: "Falta la clave de acceso del overlay." });
     }
-    if (authEnabled && url.pathname.startsWith("/api/") && !hasDashboardSession(req) && !overlayApi) {
+    const twitchLoginApi = ["/api/auth/twitch/device", "/api/auth/twitch/device/status"].includes(url.pathname);
+    if (authEnabled && url.pathname.startsWith("/api/") && !hasDashboardSession(req) && !overlayApi && !twitchLoginApi) {
       return json(res, 401, { error: "Inicia sesión en el panel de Nexo." });
     }
     if (authEnabled && isStaticRequest && ["/", "/index.html"].includes(url.pathname) && !overlayPage && !hasDashboardSession(req)) {
@@ -647,14 +656,32 @@ const server = createServer(async (req, res) => {
       });
       return;
     }
+    if (req.method === "POST" && url.pathname === "/api/auth/twitch/device") return json(res, 200, await startDeviceFlow());
+    if (req.method === "GET" && url.pathname === "/api/auth/twitch/device/status") {
+      const result = await pollDeviceFlow(url.searchParams.get("id") || "");
+      const streamer = result.streamerId ? await getStreamer(result.streamerId) : null;
+      if (result.status === "authorized" && streamer) {
+        const expiresAt = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
+        const maxAge = 12 * 60 * 60;
+        const secure = req.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
+        const session = `nexo_session=${streamer.id}.${expiresAt}.${sessionSignature(streamer.id, expiresAt)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`;
+        const streamerCookie = `nexo_streamer=${streamer.id}.${expiresAt}.${streamerSignature(streamer.id, expiresAt)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`;
+        res.setHeader("set-cookie", [session, streamerCookie]);
+      }
+      return json(res, 200, { status: result.status, error: result.error || null, account: result.account || null });
+    }
     if (req.method === "POST" && url.pathname === "/api/twitch/device") return json(res, 200, await startDeviceFlow());
     if (req.method === "GET" && url.pathname === "/api/twitch/device/status") {
       const result = await pollDeviceFlow(url.searchParams.get("id") || "");
       const streamer = result.streamerId ? await getStreamer(result.streamerId) : null;
       if (streamer) {
-        const expiresAt = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+        const expiresAt = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
+        const maxAge = 12 * 60 * 60;
         const secure = req.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
-        res.setHeader("set-cookie", `nexo_streamer=${streamer.id}.${expiresAt}.${streamerSignature(streamer.id, expiresAt)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${secure}`);
+        res.setHeader("set-cookie", [
+          `nexo_session=${streamer.id}.${expiresAt}.${sessionSignature(streamer.id, expiresAt)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`,
+          `nexo_streamer=${streamer.id}.${expiresAt}.${streamerSignature(streamer.id, expiresAt)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secure}`,
+        ]);
       }
       const room = streamer ? await getRoom(streamer.id) : null;
       const gameState = streamer ? await getGameState(streamer.id) : null;
@@ -727,8 +754,8 @@ const server = createServer(async (req, res) => {
   }
 });
 
-if (process.env.NODE_ENV === "production" && (!APP_PASSWORD || !APP_SESSION_SECRET || !process.env.DATABASE_URL || !process.env.TOKEN_ENCRYPTION_KEY)) {
-  console.error("Falta APP_PASSWORD, APP_SESSION_SECRET, DATABASE_URL o TOKEN_ENCRYPTION_KEY; configura el almacenamiento multi-streamer antes de publicar Nexo.");
+if (process.env.NODE_ENV === "production" && (!APP_SESSION_SECRET || !process.env.DATABASE_URL || !process.env.TOKEN_ENCRYPTION_KEY)) {
+  console.error("Falta APP_SESSION_SECRET, DATABASE_URL o TOKEN_ENCRYPTION_KEY; configura el almacenamiento multi-streamer antes de publicar Nexo.");
   process.exit(1);
 }
 

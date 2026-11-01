@@ -28,7 +28,7 @@ Edit this paragraph to match the team's actual use of Codex and the work shown i
 
 - Code repository (select the deployed branch): https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 - Public demo (no login): https://twitch-pro.onrender.com/demo
-- Streamer dashboard (protected): https://twitch-pro.onrender.com/
+- Streamer dashboard (Twitch sign-in): https://twitch-pro.onrender.com/
 
 The public demo is a no-login, template-only browser simulation. It cannot connect Twitch or spend AI API quota. Live Twitch and OBS integration should be shown in the demo video.
 
@@ -42,14 +42,14 @@ The public demo is a no-login, template-only browser simulation. It cannot conne
 2. Choose a scenario card and select **Create room**.
 3. Follow the object names and commands shown in the room. Use the simulated chat field to inspect and solve clues, request a hint, trigger a visual style, and ask Mimo to react.
 4. Use the displayed code to open the vault.
-5. To run a live Twitch integration test, clone the deployed source branch and follow README.en.md with your own Twitch Developer application and test channel. Local development does not require the hosted dashboard password.
-6. For a real Twitch and OBS demonstration without local setup, watch the linked video. The protected hosted dashboard is for the project team; the no-login public demo is available to everyone.
+5. To run a live Twitch integration test, clone the deployed source branch and follow README.en.md with your own Twitch Developer application and test channel. Local development does not require a hosted login.
+6. For a real Twitch and OBS demonstration without local setup, watch the linked video. Streamers sign in with their own Twitch account. Viewers can try the no-login public demo and join a real live game through Twitch chat.
 
 ## Video outline (target runtime: 2:40; maximum: under 3:00)
 
 Use [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md) for the timed shot list and narration.
 
-Record in 16:9 with clear English narration or English subtitles. Use your own Twitch test channel and a second viewer account. Keep API keys, Twitch device codes, dashboard password, private overlay URL, email addresses, and personal chat messages out of frame. Do not use copyrighted music or unlicensed third-party assets.
+Record in 16:9 with clear English narration or English subtitles. Use your own Twitch test channel and a second viewer account. Keep API keys, Twitch device codes, private overlay URL, email addresses, and personal chat messages out of frame. Do not use copyrighted music or unlicensed third-party assets.
 
 - **0:00–0:15 — The problem and idea.** Show the stream and say: “Fast Twitch chats are hard to follow. Nexo turns viewers into a team solving a live escape room.”
 - **0:15–0:45 — Real Twitch chat.** Show the streamer connected to Twitch, then send one actual viewer command such as !examinar [object]. Show that the real chat event appears and advances the room.
