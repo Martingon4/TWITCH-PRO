@@ -20,6 +20,7 @@
     title: "El Archivo Sumergido",
     theme: "archivo submarino",
     environment: "underwater",
+    summary: "Una cámara sellada esconde un secreto. El chat debe reunir tres cifras y escapar en equipo.",
     opening: "Una cámara sellada esconde un secreto. El chat debe reunir tres cifras y escapar en equipo.",
     clues: {
       reloj: { name: "RELOJ", digit: "2", answer: "2", riddle: "En el panel del reloj aparece (18 ÷ 3) − 4. ¿Qué cifra resulta?", hint: "Resuelve primero la división y luego resta 4.", caption: "Resuelve el acertijo del reloj." },
@@ -95,10 +96,12 @@
     $("chatOnline").textContent = String(count);
   }
 
-  function setCaster(text, addToChat = true) {
+  function setCaster(text, addToChat = true, source = "demo") {
     const safeLine = String(text || "").replace(/[<>\u0000-\u001f]/g, " ").trim().slice(0, 180);
     if (!safeLine) return;
     $("casterLine").textContent = safeLine;
+    $("casterModeTag").textContent = source === "openai" ? "· IA" : source === "plantilla" ? "· RESPALDO" : "· DEMO";
+    $("casterCard").classList.toggle("caster-ai", source === "openai");
     const card = $("casterCard");
     card.classList.remove("pop", "quiet");
     if (!state.effects) card.classList.add("quiet");
@@ -115,15 +118,15 @@
   async function requestCaster(trigger) {
     if (state.casterBusy) return;
     state.casterBusy = true;
-    if (state.serverAvailable) {
-      try {
-        await api("/api/caster", { method: "POST", body: JSON.stringify({ trigger, context: state.chatContext.slice(-8) }) });
-        return;
-      } catch {}
-      finally { state.casterBusy = false; }
+    try {
+      const result = await api("/api/caster", { method: "POST", body: JSON.stringify({ trigger, context: state.chatContext.slice(-8) }) });
+      state.serverAvailable = true;
+      setCaster(result.line, true, result.source || "openai");
+    } catch {
+      setCaster(randomLine(trigger), true, "plantilla");
+    } finally {
+      state.casterBusy = false;
     }
-    setCaster(randomLine(trigger));
-    state.casterBusy = false;
   }
 
   function showToast(message) {
@@ -464,10 +467,24 @@
   function applyRoom(room, note = null) {
     if (!room || !room.clues) return;
     const roomKey = `${room.title}|${room.code}|${room.opening}|${JSON.stringify(room.clues)}`;
-    if (roomKey === state.lastRoomKey) return;
+    if (roomKey === state.lastRoomKey) {
+      const generatedWithAI = room.source === "openai";
+      const sourceBadge = $("roomSourceBadge");
+      sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : "PLANTILLA DE RESPALDO";
+      sourceBadge.classList.toggle("source-ai", generatedWithAI);
+      sourceBadge.classList.toggle("source-template", !generatedWithAI);
+      const noteElement = $("roomGenerationNote");
+      noteElement.hidden = false;
+      noteElement.classList.toggle("warning", Boolean(note) || !generatedWithAI);
+      noteElement.textContent = note || (generatedWithAI
+        ? "OpenAI creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos."
+        : "Esta sala usa acertijos de plantilla. El tema aparece en la historia, pero los acertijos no se personalizaron con OpenAI.");
+      return;
+    }
     state.lastRoomKey = roomKey;
     state.room = room;
     const environments = ["underwater", "space", "haunted", "jungle"];
+    const environmentNames = { underwater: "Bajo el agua", space: "Espacio profundo", haunted: "Mansión encantada", jungle: "Jungla antigua" };
     const scene = $("scene");
     scene.classList.remove(...environments.map((environment) => `environment-${environment}`));
     scene.classList.add(`environment-${environments.includes(room.environment) ? room.environment : "underwater"}`);
@@ -475,14 +492,50 @@
     $("streamHeadingTitle").textContent = room.title;
     $("roomLabelText").textContent = room.title.toLocaleUpperCase("es").slice(0, 30);
     $("sceneCaption").lastElementChild.textContent = room.opening;
+    $("roomBriefTitle").textContent = room.title;
+    $("roomBriefStory").textContent = room.summary || room.opening || `El chat debe resolver tres acertijos inspirados en «${room.theme || "la situación propuesta"}» y abrir la bóveda.`;
+    $("roomThemeFact").textContent = `Situación · ${room.theme || "Reto de la comunidad"}`;
+    $("roomEnvironmentFact").textContent = `Atmósfera · ${environmentNames[room.environment] || environmentNames.underwater}`;
+    const sourceBadge = $("roomSourceBadge");
+    const generatedWithAI = room.source === "openai";
+    sourceBadge.textContent = generatedWithAI ? "GENERADA CON OPENAI" : "PLANTILLA DE RESPALDO";
+    sourceBadge.classList.toggle("source-ai", generatedWithAI);
+    sourceBadge.classList.toggle("source-template", !generatedWithAI);
+    const objectList = $("roomObjectList");
+    objectList.replaceChildren();
+    Object.entries(objectMeta).forEach(([id]) => {
+      const clue = room.clues[id];
+      const item = document.createElement("div");
+      item.className = "room-object";
+      const name = document.createElement("strong");
+      name.textContent = clue.name || id.toLocaleUpperCase("es");
+      const riddle = document.createElement("span");
+      riddle.textContent = clue.riddle || clue.caption || "Acertijo por descubrir.";
+      item.append(name, riddle);
+      objectList.append(item);
+    });
+    const firstObject = room.clues.reloj?.name || "reloj";
+    $("roomFirstStep").replaceChildren(document.createTextNode("Empiecen con "));
+    const firstCommand = document.createElement("code");
+    firstCommand.textContent = `!examinar ${firstObject.toLocaleLowerCase("es")}`;
+    $("roomFirstStep").append(firstCommand, document.createTextNode(" en el chat."));
+    const generationNote = $("roomGenerationNote");
+    generationNote.hidden = false;
+    generationNote.classList.toggle("warning", Boolean(note) || !generatedWithAI);
+    generationNote.textContent = note || (generatedWithAI
+      ? "OpenAI creó el argumento y los tres acertijos específicos de esta situación. La combinación se muestra al resolverlos."
+      : "Esta sala usa acertijos de plantilla. El tema aparece en la historia, pero los acertijos no se personalizaron con OpenAI.");
     renderObjectLabels();
     $("sceneHint").textContent = "Examinen cada objeto, resuelvan sus acertijos y prueben el código final.";
     $("chatBannerText").innerHTML = `Encuentren los objetos, resuelvan sus acertijos y escriban <b>!codigo [código]</b>.`;
-    $("aiStatus").classList.toggle("ready", room.source === "openai");
     if (note) showToast(note);
     resetGame(false);
     showCaption(room.opening);
-    showEvent(room.source === "openai" ? "Nueva sala generada con IA" : "Nueva sala lista para jugar");
+    const generatedMessage = room.source === "openai"
+      ? `Sala «${room.title}» generada con OpenAI. ${room.summary || room.opening} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")} en el chat.`
+      : `Sala «${room.title}» creada con plantilla. ${note || "Los acertijos son de respaldo y no están adaptados por OpenAI."} Empiecen con !examinar ${firstObject.toLocaleLowerCase("es")}.`;
+    addMessage({ user: "NEXO · MISIÓN", text: generatedMessage, system: true, good: room.source === "openai" });
+    showEvent(room.source === "openai" ? "Sala generada con OpenAI · mira el dossier" : "Sala de respaldo · mira el motivo en el dossier");
   }
 
   function resetGame(showMessage = true) {
@@ -525,25 +578,30 @@
     button.disabled = true;
     button.textContent = "GENERANDO…";
     $("aiStatus").classList.add("busy");
+    $("roomGenerationNote").hidden = false;
+    $("roomGenerationNote").classList.remove("warning");
+    $("roomGenerationNote").textContent = "Conectando con Nexo y pidiendo a OpenAI una historia y tres acertijos basados en esta situación… Si Render estaba dormido, la primera respuesta puede tardar.";
+    $("roomSourceBadge").textContent = "GENERANDO SALA…";
+    $("roomSourceBadge").classList.remove("source-ai", "source-template");
     try {
-      if (state.serverAvailable) {
-        const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt }) });
-        applyRoom(result.room, result.note);
-        requestCaster("room");
-      } else {
-        const room = structuredClone(fallbackRoom);
-        room.theme = prompt.slice(0, 64);
-        room.title = `${prompt.charAt(0).toLocaleUpperCase("es")}${prompt.slice(1, 43)}: la Cámara Sellada`;
-        room.opening = `Situación: ${room.theme}. Resuelvan los tres acertijos y usen el código para abrir la bóveda.`;
-        const lowerTheme = prompt.toLocaleLowerCase("es");
-        room.environment = /espaci|planeta|nave|luna|galax|astronaut|órbita|orbita/.test(lowerTheme) ? "space" : /bosque|jungla|selva|templo|isla|jardín|jardin/.test(lowerTheme) ? "jungle" : /fantasma|embruj|castillo|cripta|vampir|terror/.test(lowerTheme) ? "haunted" : "underwater";
-        room.source = "plantilla";
-        applyRoom(room, "Servidor no iniciado · se usó una sala de respaldo.");
-        requestCaster("room");
-      }
+      const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt }) });
+      state.serverAvailable = true;
+      applyRoom(result.room, result.note);
+      if (result.room?.source === "openai") requestCaster("room");
       $("themeInput").value = "";
     } catch (error) {
-      showToast(error.message || "No se pudo crear la sala.");
+      const room = structuredClone(fallbackRoom);
+      room.theme = prompt.slice(0, 64);
+      room.title = `${prompt.charAt(0).toLocaleUpperCase("es")}${prompt.slice(1, 43)}: la Cámara Sellada`;
+      room.summary = `El chat investiga «${room.theme}» resolviendo tres acertijos de respaldo para abrir la bóveda.`;
+      room.opening = `Situación: ${room.theme}. Resuelvan los tres acertijos y usen el código para abrir la bóveda.`;
+      const lowerTheme = prompt.toLocaleLowerCase("es");
+      room.environment = /espaci|planeta|nave|luna|galax|astronaut|órbita|orbita/.test(lowerTheme) ? "space" : /bosque|jungla|selva|templo|isla|jardín|jardin/.test(lowerTheme) ? "jungle" : /fantasma|embruj|castillo|cripta|vampir|terror/.test(lowerTheme) ? "haunted" : "underwater";
+      room.source = "plantilla";
+      state.serverAvailable = false;
+      const explanation = `No se pudo contactar al servidor (${error.message || "sin respuesta"}). Se cargó una plantilla local; OpenAI no generó esta sala. Revisa que Render esté en línea y vuelve a intentarlo.`;
+      applyRoom(room, explanation);
+      showToast("Se usó plantilla local · consulta el dossier de la misión");
     } finally {
       button.disabled = false;
       button.innerHTML = "CREAR SALA <span>↗</span>";
@@ -581,7 +639,7 @@
     }
     const ai = $("aiStatus");
     ai.classList.toggle("ready", state.aiEnabled);
-    ai.innerHTML = `<span class="ai-indicator"></span>${state.aiEnabled ? `IA ACTIVA · ${escapeHTML(payload.ai.model)}` : "IA · PLANTILLA"}`;
+    ai.innerHTML = `<span class="ai-indicator"></span>${state.aiEnabled ? `OPENAI CONFIGURADO · ${escapeHTML(payload.ai.model)}` : "PLANTILLAS · OPENAI NO CONFIGURADO"}`;
   }
 
   function connectEvents() {
@@ -604,11 +662,16 @@
         try { const result = JSON.parse(event.data); applyRoom(result.room, result.note); } catch {}
       });
       state.eventSource.addEventListener("caster-line", (event) => {
-        try { const result = JSON.parse(event.data); setCaster(result.line); } catch {}
+        try { const result = JSON.parse(event.data); setCaster(result.line, false, result.source || "openai"); } catch {}
       });
       state.eventSource.onopen = () => { state.serverAvailable = true; };
       state.eventSource.onerror = () => { state.serverAvailable = false; };
-    } catch { state.serverAvailable = false; }
+    } catch {
+      state.serverAvailable = false;
+      const ai = $("aiStatus");
+      ai.classList.remove("ready");
+      ai.innerHTML = `<span class="ai-indicator"></span>SERVIDOR SIN RESPUESTA · SE INTENTARÁ AL CREAR`;
+    }
   }
 
   async function checkServer() {
@@ -678,7 +741,7 @@
     initialMessages.forEach((message, index) => {
       window.setTimeout(() => addMessage({ ...message }), index * 170);
     });
-    window.setTimeout(() => setCaster("A ver, equipo. Tres pistas, una puerta y cero presión… bueno, casi.", true), initialMessages.length * 170 + 150);
+    window.setTimeout(() => setCaster("A ver, equipo. Tres pistas, una puerta y cero presión… bueno, casi.", true, "demo"), initialMessages.length * 170 + 150);
   }
 
   $("chatForm").addEventListener("submit", (event) => {

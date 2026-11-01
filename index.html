@@ -36,6 +36,25 @@
             <span class="ai-status" id="aiStatus"><span class="ai-indicator"></span> IA · DEMO LOCAL</span>
           </section>
 
+          <section class="room-brief panel" id="roomBrief" aria-live="polite" aria-label="Resumen de la sala">
+            <div class="room-brief-main">
+              <div class="room-brief-heading"><span class="section-kicker">DOSSIER DE LA MISIÓN</span><span class="room-source source-template" id="roomSourceBadge">PLANTILLA DE DEMO</span></div>
+              <h2 id="roomBriefTitle">El Archivo Sumergido</h2>
+              <p class="room-brief-story" id="roomBriefStory">Una cámara sellada esconde un secreto. El chat debe reunir tres cifras y escapar en equipo.</p>
+              <div class="room-facts"><span id="roomThemeFact">Situación · Archivo submarino</span><span id="roomEnvironmentFact">Atmósfera · Bajo el agua</span></div>
+            </div>
+            <div class="room-brief-side">
+              <span class="section-kicker">LO QUE CREÓ</span>
+              <div class="room-object-list" id="roomObjectList">
+                <div class="room-object"><strong>RELOJ</strong><span>Una cuenta de dos pasos oculta la primera cifra.</span></div>
+                <div class="room-object"><strong>ESTATUA</strong><span>Calculen cuántos sellos quedan en la caja.</span></div>
+                <div class="room-object"><strong>ANTORCHA</strong><span>Resuelvan las marcas para encontrar la última cifra.</span></div>
+              </div>
+              <p class="room-first-step" id="roomFirstStep">Empiecen con <code>!examinar reloj</code> en el chat.</p>
+            </div>
+            <p class="room-generation-note" id="roomGenerationNote" hidden></p>
+          </section>
+
           <div class="game-frame" id="gameFrame">
             <div class="frame-topline"><span><span class="frame-dot"></span> FEED DEL STREAM</span><span class="mono">00:14:32</span></div>
             <div class="scene scene-idle" id="scene">
@@ -59,7 +78,7 @@
                 <div class="scene-caption" id="sceneCaption"><span class="caption-bar"></span><span>La puerta no se abrirá sola. Por suerte, el chat sí sabe leer.</span></div>
                 <div class="caster-card" id="casterCard" aria-live="polite">
                   <div class="caster-avatar"><span class="caster-eye eye-left"></span><span class="caster-eye eye-right"></span><span class="caster-mouth"></span><span class="caster-aura"></span></div>
-                  <div class="caster-copy"><span class="caster-name">MIMO <span>· CO-CASTER</span></span><p id="casterLine">A ver, equipo. Tres pistas, una puerta y cero presión… bueno, casi.</p></div>
+                  <div class="caster-copy"><span class="caster-name">MIMO <span id="casterModeTag">· DEMO</span></span><p id="casterLine">A ver, equipo. Tres pistas, una puerta y cero presión… bueno, casi.</p></div>
                   <span class="caster-sound" aria-hidden="true"><i></i><i></i><i></i></span>
                 </div>
                 <div class="success-overlay" id="successOverlay"><div class="success-icon">✦</div><p class="eyebrow">OBJETIVO COMPLETADO</p><h2>EL CHAT LO HIZO.</h2><p>La puerta se abrió. El streamer puede respirar.</p><button id="nextRoomButton" class="next-room-button">JUGAR OTRA VEZ <span>↗</span></button></div>

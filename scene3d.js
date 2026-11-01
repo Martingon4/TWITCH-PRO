@@ -15,11 +15,14 @@ if (canvas && host && sceneElement) {
     camera.position.set(0, 0, 10);
     camera.lookAt(0, 0, 0);
 
-    const ambient = new THREE.HemisphereLight(0xb8e7d7, 0x071112, 1.1);
+    const ambient = new THREE.HemisphereLight(0xd8d0ff, 0x071112, 1.45);
     world.add(ambient);
-    const keyLight = new THREE.PointLight(0x75d8cf, 2.2, 13);
+    const keyLight = new THREE.PointLight(0x75d8cf, 3.4, 16);
     keyLight.position.set(0, 0, 1.8);
     world.add(keyLight);
+    const rimLight = new THREE.PointLight(0xc07cff, 1.9, 12);
+    rimLight.position.set(-3.2, 1.9, 0.3);
+    world.add(rimLight);
 
     const portal = new THREE.Group();
     world.add(portal);
@@ -40,6 +43,17 @@ if (canvas && host && sceneElement) {
     rings[2].rotation.set(-0.22, -0.12, 0.18);
     portal.add(...rings);
 
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xd8fff7, transparent: true, opacity: 0.66, wireframe: true });
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.53, 1), coreMaterial);
+    core.position.z = 0.42;
+    portal.add(core);
+    const coreHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 24, 18),
+      new THREE.MeshBasicMaterial({ color: 0x79f3e6, transparent: true, opacity: 0.16, depthWrite: false })
+    );
+    coreHalo.position.z = 0.38;
+    portal.add(coreHalo);
+
     const shardGeometry = new THREE.OctahedronGeometry(0.12, 0);
     const shardMaterials = [
       new THREE.MeshBasicMaterial({ color: 0xff8b73, transparent: true, opacity: 0.9 }),
@@ -56,7 +70,7 @@ if (canvas && host && sceneElement) {
       return { mesh: shard, angle, offset: index * 0.62, radius: 2.03 + (index % 2) * 0.13 };
     });
 
-    const particleCount = 150;
+    const particleCount = 210;
     const positions = new Float32Array(particleCount * 3);
     const drift = new Float32Array(particleCount);
     for (let index = 0; index < particleCount; index += 1) {
@@ -72,10 +86,10 @@ if (canvas && host && sceneElement) {
     world.add(particles);
 
     const environments = {
-      underwater: { color: 0x48e2dc, accent: 0xb9fff1, fog: 0x082426 },
-      space: { color: 0x7da9ff, accent: 0xd6a7ff, fog: 0x11152b },
-      haunted: { color: 0xd47ee8, accent: 0xffa38d, fog: 0x241627 },
-      jungle: { color: 0x9ddd68, accent: 0xffd271, fog: 0x12271c },
+      underwater: { color: 0x37f0df, accent: 0x8be8ff, secondary: 0x9383ff, fog: 0x082426 },
+      space: { color: 0x8b91ff, accent: 0xf39cff, secondary: 0x6ce9ef, fog: 0x11152b },
+      haunted: { color: 0xf276c5, accent: 0xffae85, secondary: 0x9e8aff, fog: 0x241627 },
+      jungle: { color: 0xb5ed55, accent: 0xffcf6e, secondary: 0x50e3bd, fog: 0x12271c },
     };
     const presets = { neon: 0x42f5d7, ambar: 0xffb84d, bruma: 0xbabfff };
     let environment = "underwater";
@@ -89,7 +103,10 @@ if (canvas && host && sceneElement) {
       ringMaterials.forEach((material) => material.color.setHex(color));
       particleMaterial.color.setHex(color);
       keyLight.color.setHex(color);
-      shardMaterials.forEach((material, index) => material.color.setHex(index % 2 ? palette.accent : color));
+      rimLight.color.setHex(palette.secondary);
+      coreMaterial.color.setHex(palette.accent);
+      coreHalo.material.color.setHex(color);
+      shardMaterials.forEach((material, index) => material.color.setHex(index % 2 ? palette.accent : index % 3 ? color : palette.secondary));
       const fog = palette.fog;
       world.fog = new THREE.FogExp2(fog, 0.018);
     }
@@ -135,6 +152,11 @@ if (canvas && host && sceneElement) {
       rings[0].rotation.z = Math.sin(elapsed * 0.18) * 0.08;
       rings[1].rotation.z += delta * 0.12;
       rings[2].rotation.y = Math.sin(elapsed * 0.24) * 0.3;
+      core.rotation.x += delta * 0.2;
+      core.rotation.y -= delta * 0.32;
+      const corePulse = 0.88 + (Math.sin(elapsed * 1.5) + 1) * 0.12;
+      core.scale.setScalar(corePulse);
+      coreHalo.material.opacity = 0.12 + (Math.sin(elapsed * 1.4) + 1) * 0.05;
       shards.forEach(({ mesh, angle, offset, radius }) => {
         const orbit = angle + elapsed * 0.12;
         mesh.position.x = Math.cos(orbit) * radius;
