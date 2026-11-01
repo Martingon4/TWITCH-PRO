@@ -23,3 +23,14 @@
 .scene.environment-jungle .door-glow{background:radial-gradient(ellipse,#a8d47930,transparent 68%)}
 .scene.environment-space .wall-lamp span{background:linear-gradient(180deg,#e0eaff,#8cb7f5 60%,#283b65);box-shadow:0 0 18px #86adf688}
 .scene.environment-jungle .wall-lamp span{background:linear-gradient(180deg,#efffd2,#a9d66f 60%,#344d2b);box-shadow:0 0 18px #aad96e88}
+.clue-card.examined{border-color:#a98bff;background:linear-gradient(145deg,#25213aee,#151922ee);box-shadow:0 0 22px #a98bff38, inset 0 0 18px #a98bff10;animation:clueSignal 2.4s ease-in-out infinite}
+.clue-card.examined.clue-torch{animation-name:clueSignalTorch}
+.clue-card.examined .clue-icon,.clue-card.examined .clue-status{color:#d2c0ff}
+.scene.environment-space .room-three-canvas{opacity:.98;mix-blend-mode:screen}
+.scene.environment-haunted .room-three-canvas{opacity:.93;mix-blend-mode:screen}
+.scene.environment-jungle .room-three-canvas{opacity:.92;mix-blend-mode:screen}
+.scene.preset-neon .room-three-canvas{filter:saturate(1.28)}
+.scene.preset-ambar .room-three-canvas{filter:saturate(1.18) sepia(.12)}
+.scene.preset-bruma .room-three-canvas{filter:saturate(1.12) hue-rotate(7deg)}
+@keyframes clueSignal{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-3px);filter:brightness(1.22)}}
+@keyframes clueSignalTorch{0%,100%{transform:translateX(-50%) translateY(0);filter:brightness(1)}50%{transform:translateX(-50%) translateY(-3px);filter:brightness(1.22)}}

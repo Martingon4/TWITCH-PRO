@@ -22,15 +22,15 @@
     environment: "underwater",
     opening: "Una cámara sellada esconde un secreto. El chat debe reunir tres cifras y escapar en equipo.",
     clues: {
-      reloj: { digit: "2", hint: "El reloj se detuvo a las 02:00. ¿Qué cifra indica la hora?", caption: "El reloj se detuvo a las 02:00. Primera cifra: 2." },
-      estatua: { digit: "4", hint: "La estatua sostiene cuatro dedos; cuenta los dedos de piedra.", caption: "La estatua sostiene cuatro dedos. Segunda cifra: 4." },
-      antorcha: { digit: "1", hint: "Solo una antorcha sigue encendida; cuenta la llama.", caption: "Solo una antorcha sigue encendida. Tercera cifra: 1." },
+      reloj: { name: "RELOJ", digit: "2", answer: "2", riddle: "En el panel del reloj aparece (18 ÷ 3) − 4. ¿Qué cifra resulta?", hint: "Resuelve primero la división y luego resta 4.", caption: "Resuelve el acertijo del reloj." },
+      estatua: { name: "ESTATUA", digit: "4", answer: "4", riddle: "La estatua protege una caja con (3 × 6) − 14 sellos. ¿Cuántos quedan?", hint: "Multiplica 3 por 6 antes de restar 14.", caption: "Resuelve el acertijo de la estatua." },
+      antorcha: { name: "ANTORCHA", digit: "1", answer: "1", riddle: "La antorcha muestra (20 ÷ 2) − 9 marcas. ¿Cuántas quedan encendidas?", hint: "Divide 20 entre 2 y luego resta 9.", caption: "Resuelve el acertijo de la antorcha." },
     },
     code: "241",
     source: "plantilla",
   };
   const state = {
-    clues: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
+    clues: {}, examined: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
     serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
     eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null,
@@ -183,32 +183,48 @@
     return ["reloj", "estatua", "antorcha"].map((id) => state.room.clues[id].digit).join("");
   }
 
-  function revealClue(objectName, user, source = "demo") {
-    const id = objectName.toLocaleLowerCase("es").replace(/[.!?]+$/, "");
+  function normalizeAnswer(value) {
+    return String(value || "").toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  }
+
+  function resolveObjectId(rawName) {
+    const name = normalizeAnswer(String(rawName || "").replace(/[.!?]+$/, ""));
+    return ["reloj", "estatua", "antorcha"].find((id) => {
+      const clue = state.room.clues[id];
+      return normalizeAnswer(id) === name || normalizeAnswer(clue.name) === name;
+    });
+  }
+
+  function renderObjectLabels() {
+    Object.entries(objectMeta).forEach(([id, meta]) => {
+      const clue = state.room.clues[id];
+      const label = clue.name || meta.label;
+      $(meta.card).querySelector(".clue-name").textContent = label;
+      $(meta.slot).querySelector("span").textContent = label.slice(0, 9);
+      $(meta.display).textContent = "SIN EXAMINAR";
+    });
+    const firstObject = state.room.clues.reloj.name || "reloj";
+    const firstCommand = document.querySelector('.inline-command[data-command]');
+    if (firstCommand) {
+      firstCommand.dataset.command = `!examinar ${firstObject.toLocaleLowerCase("es")}`;
+      firstCommand.textContent = `!examinar ${firstObject.toLocaleLowerCase("es")}`;
+    }
+  }
+
+  function clueSolved(id, user) {
     const meta = objectMeta[id];
     const clue = state.room.clues[id];
-    if (!meta || !clue) {
-      showCaption("No encuentras eso. Prueba reloj, estatua o antorcha.");
-      showToast("Objeto no encontrado · reloj / estatua / antorcha");
-      return;
-    }
-    if (state.clues[id]) {
-      addMessage({ user: "Sistema", text: `${user} volvió a mirar ${id}. La pista ya está en el tablero.`, system: true });
-      showCaption(`Pista ya descubierta: ${meta.label} = ${clue.digit}.`);
-      return;
-    }
     state.clues[id] = true;
     syncThreeScene("clue", { id });
-    $(meta.display).textContent = `${meta.label} · ${clue.digit}`;
+    $(meta.display).textContent = `${clue.name || meta.label} · ${clue.digit}`;
     $(meta.card).classList.add("found");
     $(meta.slot).classList.add("active");
     $(meta.slot).querySelector("i").textContent = clue.digit;
     const count = Object.keys(state.clues).length;
     $("clueCount").textContent = String(count);
     $("lockDisplay").textContent = ["reloj", "estatua", "antorcha"].map((key) => state.clues[key] ? state.room.clues[key].digit : "•").join(" ");
-    addMessage({ user: "Sistema", text: `${user} descubrió una pista: ${meta.label} = ${clue.digit}.`, system: true, good: true });
-    showCaption(clue.caption);
-    showEvent(`Pista encontrada · ${meta.label} = ${clue.digit}`);
+    addMessage({ user: "Sistema", text: `${user} resolvió ${clue.name || meta.label}: cifra ${clue.digit}.`, system: true, good: true });
+    showEvent(`Acertijo resuelto · ${clue.name || meta.label}`);
     rewardUser(user, 16, 0);
     requestCaster("clue");
     if (count === 3) {
@@ -216,22 +232,55 @@
       $("slotCode").classList.add("active");
       $("slotCode").querySelector("i").textContent = code.split("").join(" ");
       $("sceneHint").textContent = `¡Código completo! Escríbanlo para abrir la bóveda: !codigo ${code}`;
-      $("chatBannerText").innerHTML = `¡Las 3 pistas están listas! Prueben <b>!codigo ${escapeHTML(code)}</b> para abrir la bóveda.`;
-      showToast(`Todas las pistas reunidas · código ${code}`);
+      $("chatBannerText").innerHTML = `¡Los 3 acertijos están resueltos! Prueben <b>!codigo ${escapeHTML(code)}</b> para abrir la bóveda.`;
+      showToast(`Acertijos resueltos · código ${code}`);
     }
+  }
+
+  function revealClue(objectName, user, source = "demo") {
+    const id = resolveObjectId(objectName);
+    const meta = objectMeta[id];
+    const clue = state.room.clues[id];
+    if (!meta || !clue) {
+      showCaption("No encuentras ese objeto. Prueba !ayuda para ver los tres nombres de esta sala.");
+      showToast("Objeto no encontrado · consulta !ayuda");
+      return;
+    }
+    if (state.clues[id]) {
+      addMessage({ user: "Sistema", text: `${user} volvió a mirar ${clue.name}. El acertijo ya está resuelto.`, system: true });
+      showCaption(`Cifra descubierta: ${clue.digit}.`);
+      return;
+    }
+    state.examined[id] = true;
+    $(meta.display).textContent = "ACERTIJO ACTIVO";
+    $(meta.card).classList.add("examined");
+    addMessage({ user: "Sistema", text: `${user} encontró un acertijo en ${clue.name}. Resuélvanlo y escriban !resolver ${id} [respuesta].`, system: true, highlight: true });
+    showCaption(clue.riddle || clue.caption);
+    showEvent(`Acertijo encontrado · ${clue.name}`);
+  }
+
+  function solveClue(args, user) {
+    const [objectName = "", ...answerParts] = String(args || "").trim().split(/\s+/);
+    const id = resolveObjectId(objectName);
+    const clue = state.room.clues[id];
+    if (!clue) return showCaption("Indica el objeto: !resolver reloj [respuesta]. Los nombres de esta sala aparecen en el panel.");
+    if (!state.examined[id]) return showCaption(`Primero examinen ${clue.name}: !examinar ${id}.`);
+    if (state.clues[id]) return showCaption(`${clue.name} ya está resuelto; la cifra es ${clue.digit}.`);
+    const answer = answerParts.join(" ");
+    if (!answer) return showCaption(`Escribe tu solución: !resolver ${id} [respuesta].`);
+    if (normalizeAnswer(answer) !== normalizeAnswer(clue.answer)) {
+      addMessage({ user: "Sistema", text: `${user} probó una respuesta para ${clue.name}, pero el mecanismo no reaccionó.`, system: true });
+      showCaption("Esa respuesta no encaja. Revisen los datos o pidan !pista.");
+      requestCaster("wrong");
+      rewardUser(user, 2, 7000);
+      return;
+    }
+    clueSolved(id, user);
   }
 
   function openVault(user, source = "demo") {
     if (state.opened) {
       addMessage({ user: "Sistema", text: "La bóveda ya está abierta. El chat se ganó su momento de gloria.", system: true });
-      return;
-    }
-    const found = Object.keys(state.clues).length;
-    if (found < 3) {
-      addMessage({ user: "Sistema", text: `Faltan ${3 - found} pista${3 - found === 1 ? "" : "s"}. Examinen los objetos antes de probar el código.`, system: true });
-      showCaption("La bóveda no cede. Primero hay que descubrir las tres pistas.");
-      requestCaster("wrong");
-      rewardUser(user, 3, 7000);
       return;
     }
     state.opened = true;
@@ -331,14 +380,18 @@
       return;
     }
     if (command === "examinar" || command === "mirar") {
-      if (!args) addMessage({ user: "Sistema", text: "Indica un objeto: reloj, estatua o antorcha.", system: true });
+      if (!args) addMessage({ user: "Sistema", text: `Indica un objeto: ${["reloj", "estatua", "antorcha"].map((id) => state.room.clues[id].name).join(", ")}.`, system: true });
       else revealClue(args, user, source);
+      return;
+    }
+    if (command === "resolver") {
+      solveClue(args, user);
       return;
     }
     if (command === "codigo" || command === "código") {
       if (args.replace(/\s/g, "") === getCode()) openVault(user, source);
       else {
-        addMessage({ user: "Sistema", text: "Ese código no funcionó. Busca las pistas en la sala.", system: true });
+        addMessage({ user: "Sistema", text: "Ese código no funcionó. Examinen y resuelvan los acertijos de la sala.", system: true });
         showCaption("La cerradura no reconoce esa combinación.");
         requestCaster("wrong");
         rewardUser(user, 3, 7000);
@@ -355,7 +408,7 @@
         state.energy = Math.max(0, state.energy - 12);
         $("energyValue").textContent = String(state.energy);
         $("energyFill").style.width = `${state.energy}%`;
-        showCaption(state.room.clues[missingId].hint);
+        showCaption(`${state.room.clues[missingId].name}: ${state.room.clues[missingId].hint}`);
         addMessage({ user: "Sistema", text: `El equipo desbloqueó una pista para ${missingId}.`, system: true, highlight: true });
         requestCaster("hint");
       } else showCaption(`Ya tienen todas las pistas. ¡Prueben !codigo ${getCode()}!`);
@@ -382,7 +435,7 @@
       return;
     }
     if (command === "ayuda" || command === "help") {
-      addMessage({ user: "Sistema", text: "Comandos: !examinar reloj/estatua/antorcha · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !estilo neon/ambar/bruma · !reacciona · demo: !canje pista/estilo/tema/mimo", system: true });
+      addMessage({ user: "Sistema", text: "Comandos: !examinar [objeto] · !resolver [objeto] [respuesta] · !pista · !codigo [código] · !tema [idea] · !votar neon/ambar/bruma · !reacciona", system: true });
       return;
     }
     if (command === "votar") {
@@ -410,7 +463,7 @@
 
   function applyRoom(room, note = null) {
     if (!room || !room.clues) return;
-    const roomKey = `${room.title}|${room.code}|${room.opening}`;
+    const roomKey = `${room.title}|${room.code}|${room.opening}|${JSON.stringify(room.clues)}`;
     if (roomKey === state.lastRoomKey) return;
     state.lastRoomKey = roomKey;
     state.room = room;
@@ -422,8 +475,9 @@
     $("streamHeadingTitle").textContent = room.title;
     $("roomLabelText").textContent = room.title.toLocaleUpperCase("es").slice(0, 30);
     $("sceneCaption").lastElementChild.textContent = room.opening;
-    $("sceneHint").textContent = "La sala está lista. Examinen objetos y trabajen en equipo para escapar.";
-    $("chatBannerText").innerHTML = `El equipo necesita <b>3 pistas</b> para abrir la bóveda.`;
+    renderObjectLabels();
+    $("sceneHint").textContent = "Examinen cada objeto, resuelvan sus acertijos y prueben el código final.";
+    $("chatBannerText").innerHTML = `Encuentren los objetos, resuelvan sus acertijos y escriban <b>!codigo [código]</b>.`;
     $("aiStatus").classList.toggle("ready", room.source === "openai");
     if (note) showToast(note);
     resetGame(false);
@@ -433,6 +487,7 @@
 
   function resetGame(showMessage = true) {
     state.clues = {};
+    state.examined = {};
     state.energy = 12;
     state.opened = false;
     state.styleVotes.clear();
@@ -445,16 +500,17 @@
     $("energyFill").style.width = "12%";
     $("nextUnlock").textContent = "Siguiente efecto · 35%";
     $("lockDisplay").textContent = "● ● ●";
-    Object.values(objectMeta).forEach((meta) => {
+    Object.entries(objectMeta).forEach(([id, meta]) => {
       $(meta.display).textContent = "SIN EXAMINAR";
       $(meta.card).classList.remove("found");
+      $(meta.card).classList.remove("examined");
       $(meta.slot).classList.remove("active");
       $(meta.slot).querySelector("i").textContent = "?";
-      $(meta.slot).querySelector("span").textContent = meta.label;
+      $(meta.slot).querySelector("span").textContent = state.room.clues[id]?.name?.slice(0, 9) || meta.label;
     });
     $("slotCode").classList.remove("active");
     $("slotCode").querySelector("i").textContent = "•••";
-    $("chatBannerText").innerHTML = "El equipo necesita <b>3 pistas</b> para abrir la bóveda.";
+    $("chatBannerText").innerHTML = "Examinen los objetos, resuelvan sus acertijos y escriban <b>!codigo [código]</b>.";
     if (showMessage) {
       addMessage({ user: "Sistema", text: "Nueva ronda iniciada. Chat, la sala está lista.", system: true });
       setCaster("Nueva sala, misma oportunidad para que el chat salve al streamer.", false);
@@ -478,7 +534,7 @@
         const room = structuredClone(fallbackRoom);
         room.theme = prompt.slice(0, 64);
         room.title = `${prompt.charAt(0).toLocaleUpperCase("es")}${prompt.slice(1, 43)}: la Cámara Sellada`;
-        room.opening = `Una cámara sellada esconde el secreto de ${room.theme}. El chat debe reunir tres cifras y escapar en equipo.`;
+        room.opening = `Situación: ${room.theme}. Resuelvan los tres acertijos y usen el código para abrir la bóveda.`;
         const lowerTheme = prompt.toLocaleLowerCase("es");
         room.environment = /espaci|planeta|nave|luna|galax|astronaut|órbita|orbita/.test(lowerTheme) ? "space" : /bosque|jungla|selva|templo|isla|jardín|jardin/.test(lowerTheme) ? "jungle" : /fantasma|embruj|castillo|cripta|vampir|terror/.test(lowerTheme) ? "haunted" : "underwater";
         room.source = "plantilla";

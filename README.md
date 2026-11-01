@@ -4,7 +4,7 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 
 ## Funciones
 
-- Salas generadas en español con OpenAI Responses API y salida JSON validada. Cada sala tiene tres pistas lógicas, un código y un ambiente visual (submarino, espacial, embrujado o jungla).
+- Escape rooms generados a partir de la situación que escribe el streamer. Con OpenAI activo, cada sala trae tres acertijos de varios pasos, objetos y nombres de comando propios, respuestas validadas, un código y un ambiente visual.
 - Una sala de respaldo jugable si no hay clave de OpenAI o si falla la generación.
 - Co-Caster Mimo: reacciones breves, amables y basadas en hasta ocho mensajes recientes; hay frases locales de respaldo.
 - Chat de Twitch mediante EventSub WebSocket y autorización Device Code.
@@ -12,7 +12,7 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 - Interacción comunitaria: la participación carga energía, `!pista` desbloquea ayuda y el chat vota por efectos visuales.
 - Escena 3D con Three.js, efectos ambientales y overlay para OBS en `http://localhost:4173/?overlay=1`.
 
-El modelo recibe el tema elegido por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat. Los tokens de Twitch se mantienen en memoria y se eliminan al apagar el servidor.
+El modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat. Los tokens de Twitch se mantienen en memoria y se eliminan al apagar el servidor.
 
 ## Requisitos y arranque
 
@@ -56,7 +56,7 @@ El archivo `render.yaml` prepara Nexo como un servicio web de Node en Render. Cr
 - `APP_PASSWORD`: contraseña compartida para que solo el streamer y los testers abran el panel.
 - `APP_SESSION_SECRET`: Render lo genera automáticamente al crear el Blueprint.
 - `OVERLAY_TOKEN`: clave aleatoria que protege el enlace de OBS. Genérala con `openssl rand -hex 32` y no compartas el enlace públicamente.
-- `OPENAI_API_KEY`: opcional; sin ella se usan respuestas de respaldo.
+- `OPENAI_API_KEY`: necesaria para crear acertijos únicos basados en la situación; sin ella se usa una plantilla jugable y el panel lo indica.
 
 Al terminar el despliegue, Render muestra una URL pública. El panel pide `APP_PASSWORD`. Para OBS usa `https://TU-SERVICIO.onrender.com/?overlay=1&key=TU_OVERLAY_TOKEN`. Mantén esa dirección privada porque permite abrir el overlay del canal.
 
@@ -77,8 +77,9 @@ Para proteger la escena, los títulos de otras recompensas no ejecutan comandos.
 
 ## Comandos
 
-- `!examinar reloj`, `!examinar estatua`, `!examinar antorcha` — descubre una cifra.
-- `!codigo 241` — intenta abrir la bóveda con el código revelado.
+- `!examinar [objeto]` — muestra el acertijo asociado a un objeto de esta sala.
+- `!resolver [objeto] [respuesta]` — comprueba la solución y revela la cifra correspondiente.
+- `!codigo [código]` — abre la bóveda al acertar; si el chat ya conoce la combinación puede probarla sin resolver todos los acertijos.
 - `!pista` — gasta 12 puntos de energía cuando la comunidad alcanza 35.
 - `!tema una estación espacial` — propone un tema y lo deja en el campo del streamer; no inicia una sala por sí solo.
 - `!votar neon`, `!votar ambar`, `!votar bruma` — votación por mayoría entre participantes únicos; con tres votos y una opción líder se aplica el estilo.

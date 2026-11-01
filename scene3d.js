@@ -40,6 +40,22 @@ if (canvas && host && sceneElement) {
     rings[2].rotation.set(-0.22, -0.12, 0.18);
     portal.add(...rings);
 
+    const shardGeometry = new THREE.OctahedronGeometry(0.12, 0);
+    const shardMaterials = [
+      new THREE.MeshBasicMaterial({ color: 0xff8b73, transparent: true, opacity: 0.9 }),
+      new THREE.MeshBasicMaterial({ color: 0x78e5d2, transparent: true, opacity: 0.84 }),
+      new THREE.MeshBasicMaterial({ color: 0xa997ff, transparent: true, opacity: 0.86 }),
+      new THREE.MeshBasicMaterial({ color: 0xffd26f, transparent: true, opacity: 0.9 }),
+    ];
+    const shards = Array.from({ length: 12 }, (_, index) => {
+      const shard = new THREE.Mesh(shardGeometry, shardMaterials[index % shardMaterials.length]);
+      const angle = (index / 12) * Math.PI * 2;
+      shard.position.set(Math.cos(angle) * (2.03 + (index % 2) * 0.13), Math.sin(angle) * 1.64, (index % 3) * 0.16 - 0.15);
+      shard.scale.setScalar(0.68 + (index % 4) * 0.17);
+      world.add(shard);
+      return { mesh: shard, angle, offset: index * 0.62, radius: 2.03 + (index % 2) * 0.13 };
+    });
+
     const particleCount = 150;
     const positions = new Float32Array(particleCount * 3);
     const drift = new Float32Array(particleCount);
@@ -56,23 +72,25 @@ if (canvas && host && sceneElement) {
     world.add(particles);
 
     const environments = {
-      underwater: { color: 0x7be7d5, fog: 0x0b2224 },
-      space: { color: 0x91baff, fog: 0x11182c },
-      haunted: { color: 0xe0a1e8, fog: 0x24182a },
-      jungle: { color: 0xbbe586, fog: 0x14251d },
+      underwater: { color: 0x48e2dc, accent: 0xb9fff1, fog: 0x082426 },
+      space: { color: 0x7da9ff, accent: 0xd6a7ff, fog: 0x11152b },
+      haunted: { color: 0xd47ee8, accent: 0xffa38d, fog: 0x241627 },
+      jungle: { color: 0x9ddd68, accent: 0xffd271, fog: 0x12271c },
     };
-    const presets = { neon: 0x64f4e3, ambar: 0xffc56d, bruma: 0xbac6f0 };
+    const presets = { neon: 0x42f5d7, ambar: 0xffb84d, bruma: 0xbabfff };
     let environment = "underwater";
     let preset = "bruma";
     let opening = false;
     let pulseUntil = 0;
 
     function applyPalette() {
-      const color = presets[preset] || environments[environment]?.color || environments.underwater.color;
+      const palette = environments[environment] || environments.underwater;
+      const color = presets[preset] || palette.color;
       ringMaterials.forEach((material) => material.color.setHex(color));
       particleMaterial.color.setHex(color);
       keyLight.color.setHex(color);
-      const fog = environments[environment]?.fog || environments.underwater.fog;
+      shardMaterials.forEach((material, index) => material.color.setHex(index % 2 ? palette.accent : color));
+      const fog = palette.fog;
       world.fog = new THREE.FogExp2(fog, 0.018);
     }
 
@@ -117,6 +135,14 @@ if (canvas && host && sceneElement) {
       rings[0].rotation.z = Math.sin(elapsed * 0.18) * 0.08;
       rings[1].rotation.z += delta * 0.12;
       rings[2].rotation.y = Math.sin(elapsed * 0.24) * 0.3;
+      shards.forEach(({ mesh, angle, offset, radius }) => {
+        const orbit = angle + elapsed * 0.12;
+        mesh.position.x = Math.cos(orbit) * radius;
+        mesh.position.y = Math.sin(orbit * 1.3 + offset) * 1.67;
+        mesh.rotation.x += delta * (0.22 + offset * 0.01);
+        mesh.rotation.y -= delta * 0.3;
+        mesh.material.opacity = 0.56 + (Math.sin(elapsed * 1.7 + offset) + 1) * 0.18;
+      });
       const targetX = opening ? -0.72 : 0;
       const targetY = opening ? -0.55 : 0;
       portal.position.x = THREE.MathUtils.damp(portal.position.x, targetX, 2.2, delta);

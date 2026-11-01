@@ -77,11 +77,11 @@ Pídele al tester que piense en voz alta y no le expliques los controles de ante
 
 ### B. Crear una sala
 
-1. Escribe un tema en el campo de creación, por ejemplo: `una estación espacial abandonada`.
+1. Describe una situación concreta en el campo de creación, por ejemplo: `la nave perdió oxígeno y el chat debe reiniciar sus motores antes de que se agote la reserva`.
 2. Pulsa **Crear sala**.
 3. Observa el título, el texto de apertura y el cambio visual del ambiente.
 
-**Se espera:** que aparezca una sala jugable. Con OpenAI configurado se indica que la sala proviene de IA; sin clave, se usa la plantilla de respaldo.
+**Se espera:** que la historia y los acertijos utilicen esa situación. Con OpenAI configurado aparecen objetos y acertijos generados para el escenario; sin clave, el panel indica que se está usando la plantilla de respaldo.
 
 ### C. Jugar en modo demo
 
@@ -92,12 +92,15 @@ Prueba estos comandos, uno por uno:
 ```text
 !ayuda
 !examinar reloj
+!resolver reloj 2
 !examinar estatua
+!resolver estatua 4
 !examinar antorcha
+!resolver antorcha 1
 !codigo 241
 ```
 
-El código correcto puede variar si se generó una sala con IA. En ese caso, usa las cifras que aparecen en las tres pistas y escríbelas en el orden reloj, estatua, antorcha.
+Los nombres de los objetos y las respuestas cambian al generar una sala con IA. Usa el nombre que aparece en la escena, primero `!examinar [objeto]` para leer el acertijo y luego `!resolver [objeto] [respuesta]`. Al completar los tres, la interfaz muestra el orden del código. `!codigo 241` abre directamente la bóveda en la plantilla de respaldo; cualquier combinación correcta la abre aunque no se hayan resuelto los tres acertijos.
 
 Luego prueba:
 
