@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: twitch-pro-nexo
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TWITCH_CLIENT_ID
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: APP_SESSION_SECRET
+        generateValue: true
+      - key: OVERLAY_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
