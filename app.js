@@ -3,10 +3,14 @@
   const syncThreeScene = (event, detail = {}) => window.dispatchEvent(new CustomEvent(`nexo:${event}`, { detail }));
   const pageParams = new URLSearchParams(location.search);
   const overlayMode = pageParams.get("overlay") === "1";
+  const eventClientId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   function apiPath(path) {
-    if (!overlayMode || !pageParams.has("key")) return path;
     const url = new URL(path, location.href);
-    url.searchParams.set("key", pageParams.get("key"));
+    if (overlayMode && pageParams.has("key")) {
+      url.searchParams.set("key", pageParams.get("key"));
+      if (pageParams.has("channel")) url.searchParams.set("channel", pageParams.get("channel"));
+    }
+    if (url.pathname === "/api/events" || url.pathname === "/api/state/game") url.searchParams.set("client", eventClientId);
     return `${url.pathname}${url.search}`;
   }
   const chatMessages = $("chatMessages");
@@ -35,8 +39,8 @@
   const state = {
     clues: {}, examined: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
-    serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
-    eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null, casterTimer: null, reactionTimer: null,
+serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected", streamerId: "", canControl: true,
+    eventSource: null, devicePoll: null, deviceFlowId: "", restoredChat: false, persistTimer: null, toastTimer: null, eventTimer: null, captionTimer: null, casterTimer: null, reactionTimer: null,
     currentPreset: "bruma", lastRoomKey: "", casterBusy: false, roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "", recentCommands: [],
   };
   const users = [
@@ -107,7 +111,7 @@
     const card = $("casterCard");
     card.classList.remove("mood-curious", "mood-worried", "mood-excited", "mood-style", "mood-playful");
     card.classList.add(`mood-${mood}`);
-    card.dataset.mood = mood;
+card.dataset.mood = mood;
     const moodLabels = { curious: "INVESTIGA", worried: "EN DUDA", excited: "CELEBRA", style: "ESTILO", playful: "EN LÍNEA" };
     $("casterMoodTag").textContent = moodLabels[mood] || moodLabels.playful;
     card.classList.remove("pop", "quiet");
@@ -453,7 +457,7 @@
     }
   }
 
-  function processCommand(text, user, source = "demo") {
+  function runCommand(text, user, source = "demo") {
     const cleaned = String(text).trim().slice(0, 180);
     if (!cleaned) return;
     const match = cleaned.match(/^!(\S+)(?:\s+(.+))?$/i);
@@ -541,6 +545,19 @@
       return;
     }
     addMessage({ user: "Sistema", text: `Comando !${escapeHTML(command)} desconocido. Prueba !ayuda.`, system: true });
+  }
+
+  function persistGameState() {
+    if (!state.streamerId) return;
+    window.clearTimeout(state.persistTimer);
+    state.persistTimer = window.setTimeout(() => {
+      api("/api/state/game", { method: "POST", body: JSON.stringify({ clues: state.clues, examined: state.examined, energy: state.energy, opened: state.opened, effects: state.effects }) }).catch(() => {});
+    }, 250);
+  }
+
+  function processCommand(text, user, source = "demo") {
+    runCommand(text, user, source);
+    persistGameState();
   }
 
   function applyRoom(room, note = null) {
@@ -659,6 +676,52 @@
       setCaster("Nueva sala, misma oportunidad para que el chat salve al streamer.", false);
       showToast("Ronda reiniciada · vuelvan a investigar");
     }
+    persistGameState();
+  }
+
+  function restoreGameState(snapshot) {
+    if (!snapshot || typeof snapshot !== "object") return;
+    window.clearTimeout(state.persistTimer);
+    const streamerId = state.streamerId;
+    state.streamerId = "";
+    resetGame(false);
+    state.streamerId = streamerId;
+    state.clues = snapshot.clues && typeof snapshot.clues === "object" ? snapshot.clues : {};
+    state.examined = snapshot.examined && typeof snapshot.examined === "object" ? snapshot.examined : {};
+    state.energy = Math.max(0, Math.min(100, Number(snapshot.energy) || 12));
+    state.opened = Boolean(snapshot.opened);
+    if (snapshot.effects !== undefined) state.effects = snapshot.effects !== false;
+    const solvedCount = Object.keys(state.clues).filter((id) => objectMeta[id]).length;
+    Object.entries(objectMeta).forEach(([id, meta]) => {
+      const clue = state.room.clues[id];
+      if (state.clues[id]) {
+        $(meta.display).textContent = `${clue.name || meta.label} · ${clue.digit}`;
+        $(meta.card).classList.add("found");
+        $(meta.slot).classList.add("active");
+        $(meta.slot).querySelector("i").textContent = clue.digit;
+      } else if (state.examined[id]) {
+        $(meta.display).textContent = "ACERTIJO ACTIVO";
+        $(meta.card).classList.add("examined");
+      }
+    });
+    $("clueCount").textContent = String(solvedCount);
+    $("energyValue").textContent = String(state.energy);
+    $("energyFill").style.width = `${state.energy}%`;
+    [35, 65, 90].forEach((threshold) => $("scene").classList.toggle(`energy-${threshold}`, state.energy >= threshold));
+    const next = [35, 65, 90].find((threshold) => state.energy < threshold);
+    $("nextUnlock").textContent = next ? `Siguiente efecto · ${next}%` : "¡Todos los efectos activos!";
+    $("effectsButton").classList.toggle("off", !state.effects);
+    $("effectsButton").setAttribute("aria-pressed", String(state.effects));
+    $("effectsButton").querySelector(".toggle-on").textContent = state.effects ? "ON" : "OFF";
+    $("scene").classList.toggle("effects-off", !state.effects);
+    $("lockDisplay").textContent = ["reloj", "estatua", "antorcha"].map((id) => state.clues[id] ? state.room.clues[id].digit : "•").join(" ");
+    if (solvedCount === 3) {
+      const code = getCode();
+      $("slotCode").classList.add("active");
+      $("slotCode").querySelector("i").textContent = state.opened ? "✓" : code.split("").join(" ");
+    }
+    $("scene").classList.toggle("open", state.opened);
+    $("successOverlay").classList.toggle("visible", state.opened);
   }
 
   async function createRoom(theme) {
@@ -707,11 +770,13 @@
     if (!payload?.twitch) return;
     state.twitchConfigured = payload.twitch.configured;
     state.twitchStatus = payload.twitch.status;
+    state.streamerId = payload.twitch.id || state.streamerId;
     state.aiEnabled = Boolean(payload.ai?.enabled);
     const chip = $("connectionState");
     chip.classList.remove("connected", "connecting", "waiting", "error");
     const status = state.twitchStatus;
     const connected = status === "connected";
+    $("overlayLinkButton").hidden = !payload.twitch.id;
     if (connected) {
       chip.classList.add("connected");
       $("connectionLabel").textContent = `TWITCH · ${payload.twitch.login || "CONECTADO"}`;
@@ -724,9 +789,10 @@
     } else {
       if (["connecting", "reconnecting"].includes(status)) chip.classList.add("connecting");
       else if (status === "waiting_for_authorization") chip.classList.add("waiting");
-      else if (status === "error") chip.classList.add("error");
-      $("connectionLabel").textContent = status === "waiting_for_authorization" ? "AUTORIZA TWITCH" : status === "connecting" ? "CONECTANDO…" : status === "reconnecting" ? "RECONECTANDO…" : "MODO DEMO";
+      else if (["error", "reauthorization_required"].includes(status)) chip.classList.add("error");
+      $("connectionLabel").textContent = status === "waiting_for_authorization" ? "AUTORIZA TWITCH" : status === "connecting" ? "CONECTANDO…" : status === "reconnecting" ? "RECONECTANDO…" : status === "reauthorization_required" ? "VUELVE A CONECTAR" : "MODO DEMO";
       $("connectButton").innerHTML = "CONECTAR TWITCH <span>↗</span>";
+      if (["error", "reauthorization_required"].includes(status) && payload.detail) showToast(payload.detail);
       $("streamState").textContent = "MODO DEMO";
       $("chatModeLabel").textContent = "SIMULACIÓN";
       $("chatInput").placeholder = "Escribe un comando...";
@@ -742,24 +808,32 @@
   function connectEvents() {
     if (typeof EventSource !== "function") return;
     try {
+      state.eventSource?.close();
       state.eventSource = new EventSource(apiPath("/api/events"));
       state.eventSource.addEventListener("status", (event) => {
         try { setTwitchStatus(JSON.parse(event.data)); } catch {}
       });
+      state.eventSource.addEventListener("client-control", (event) => {
+        try { state.canControl = Boolean(JSON.parse(event.data).active); } catch {}
+      });
       state.eventSource.addEventListener("chat-message", (event) => {
         try {
           const message = JSON.parse(event.data);
-          processCommand(message.text, message.user || message.login || "chat", "twitch");
+          if (state.canControl) processCommand(message.text, message.user || message.login || "chat", "twitch");
+          else addMessage({ user: message.user || message.login || "chat", text: message.text, source: "twitch" });
         } catch {}
       });
       state.eventSource.addEventListener("channel-reward", (event) => {
-        try { handleChannelReward(JSON.parse(event.data)); } catch {}
+        try { if (state.canControl) handleChannelReward(JSON.parse(event.data)); } catch {}
       });
       state.eventSource.addEventListener("room-generated", (event) => {
         try { const result = JSON.parse(event.data); applyRoom(result.room, result.note); } catch {}
       });
       state.eventSource.addEventListener("caster-line", (event) => {
         try { const result = JSON.parse(event.data); setCaster(result.line, false, result.source || "openai"); } catch {}
+      });
+      state.eventSource.addEventListener("game-state", (event) => {
+        try { restoreGameState(JSON.parse(event.data)); } catch {}
       });
       state.eventSource.onopen = () => { state.serverAvailable = true; };
       state.eventSource.onerror = () => { state.serverAvailable = false; };
@@ -776,7 +850,14 @@
       const status = await api("/api/status");
       state.serverAvailable = true;
       setTwitchStatus(status);
-    } catch { state.serverAvailable = false; }
+      if (status.room) applyRoom(status.room);
+      if (status.gameState) restoreGameState(status.gameState);
+      if (Array.isArray(status.chat) && !state.restoredChat) {
+        status.chat.forEach((message) => addMessage({ user: message.user, text: message.text, source: message.source || "twitch" }));
+        state.restoredChat = status.chat.length > 0;
+      }
+      return status;
+    } catch { state.serverAvailable = false; return null; }
   }
 
   function openTwitchModal() {
@@ -793,6 +874,7 @@
     $("twitchDialogCopy").textContent = "Nexo solicitará permiso para leer el chat y los canjes de puntos de Twitch. Mimo aparece como Co-Caster visual en el overlay.";
     $("twitchDialogStatus").textContent = "Solicitando código seguro de activación…";
     api("/api/twitch/device", { method: "POST", body: "{}" }).then((device) => {
+      state.deviceFlowId = device.id;
       $("deviceCodeBox").hidden = false;
       $("deviceCode").textContent = device.userCode;
       $("activateLink").href = device.verificationUri || "https://www.twitch.tv/activate";
@@ -808,11 +890,13 @@
 
   async function pollDeviceStatus() {
     try {
-      const result = await api("/api/twitch/device/status");
+      const result = await api(`/api/twitch/device/status?id=${encodeURIComponent(state.deviceFlowId)}`);
       setTwitchStatus(result);
       if (result.status === "authorized" || result.twitch?.status === "connecting") $("twitchDialogStatus").textContent = "Autorización recibida. Conectando con el chat…";
       if (result.twitch?.status === "connected") {
         window.clearInterval(state.devicePoll);
+        connectEvents();
+        await checkServer();
         $("twitchDialogTitle").textContent = "¡Chat conectado!";
         $("twitchDialogStatus").textContent = result.twitch.rewardsAvailable ? `Chat y canjes de ${result.twitch.displayName || result.twitch.login} conectados.` : `Chat de ${result.twitch.displayName || result.twitch.login} conectado. Los canjes de puntos no están disponibles.`;
         $("deviceCodeBox").hidden = true;
@@ -830,8 +914,22 @@
   }
 
   async function disconnectTwitch() {
-    try { await api("/api/twitch/disconnect", { method: "POST", body: "{}" }); showToast("Chat de Twitch desconectado"); }
+    try {
+      const result = await api("/api/twitch/disconnect", { method: "POST", body: "{}" });
+      setTwitchStatus(result);
+      state.streamerId = result.twitch?.id || "";
+      connectEvents();
+      showToast("Chat de Twitch desconectado");
+    }
     catch (error) { showToast(error.message); }
+  }
+
+  async function copyOverlayLink() {
+    try {
+      const result = await api("/api/overlay/link");
+      await navigator.clipboard.writeText(result.url);
+      showToast(`Enlace privado de OBS copiado para ${result.channel}.`);
+    } catch (error) { showToast(error.message || "No se pudo copiar el enlace de OBS."); }
   }
 
   function seedChat() {
@@ -843,6 +941,10 @@
 
   $("chatForm").addEventListener("submit", (event) => {
     event.preventDefault();
+    if (state.streamerId && !state.canControl) {
+      showToast("Otra pestaña controla la partida de este canal.");
+      return;
+    }
     if (input.value.trim()) {
       rememberRecentCommand(input.value);
       processCommand(input.value, "tú", "demo");
@@ -901,6 +1003,7 @@
     showToast(state.effects ? "Efectos del chat activados" : "Efectos del chat pausados");
   });
   $("connectButton").addEventListener("click", () => state.twitchStatus === "connected" ? disconnectTwitch() : openTwitchModal());
+  $("overlayLinkButton").addEventListener("click", copyOverlayLink);
   $("closeTwitchModal").addEventListener("click", () => { $("twitchModal").hidden = true; });
   $("twitchDialogAction").addEventListener("click", () => { $("twitchModal").hidden = true; });
   $("twitchModal").addEventListener("click", (event) => { if (event.target === $("twitchModal")) $("twitchModal").hidden = true; });
@@ -928,7 +1031,6 @@
   renderRecentCommands();
   document.body.classList.toggle("overlay-mode", overlayMode);
   connectEvents();
-  checkServer();
+  checkServer().then((status) => { if (!status?.twitch?.id) seedChat(); });
   selectRoomMode("template");
-  seedChat();
 })();

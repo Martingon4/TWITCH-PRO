@@ -13,7 +13,9 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 - Interacción comunitaria: la participación carga energía, `!pista` desbloquea ayuda y el chat activa paletas y animaciones de Three.js escribiendo una petición para Mimo.
 - Escena 3D con Three.js, efectos ambientales y overlay para OBS en `http://localhost:4173/?overlay=1`.
 
-En el modo de IA, el modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat. Los tokens de Twitch se mantienen en memoria y se eliminan al apagar el servidor.
+En el modo de IA, el modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat.
+
+Cada autorización identifica un canal por su Twitch User ID. PostgreSQL separa por ese ID la sala activa, el progreso, hasta siete días del chat, los tokens cifrados y los eventos recientes. El panel recupera los últimos 60 mensajes. Los eventos se comparten entre instancias del servidor; un arrendamiento por canal evita sockets duplicados y una sesión controladora evita que dos pestañas ejecuten el mismo comando.
 
 ## Requisitos y arranque
 
@@ -47,7 +49,7 @@ OPENAI_MODEL=gpt-4.1-mini
 2. Si el formulario pide OAuth Redirect URL, registra `http://localhost:4173`.
 3. Reinicia el servidor, pulsa **Conectar Twitch** y autoriza el código en Twitch Activate.
 4. Autoriza los permisos de lectura de chat y canjes. Si ya habías conectado Nexo antes de esta versión, desconecta y vuelve a autorizar para agregar el permiso de puntos.
-5. EventSub se suscribe a los mensajes y a los canjes de recompensas personalizadas. El token no se guarda en disco. Si tu canal no puede usar puntos o Twitch rechaza esa suscripción, el chat sigue conectado y las recompensas no estarán disponibles.
+5. EventSub se suscribe a los mensajes y a los canjes de recompensas personalizadas. En producción, Nexo cifra los tokens en PostgreSQL y los renueva al reconectar. Si tu canal no puede usar puntos o Twitch rechaza esa suscripción, el chat sigue conectado y las recompensas no estarán disponibles.
 
 ## Publicar para una prueba en línea
 
@@ -55,13 +57,15 @@ El archivo `render.yaml` prepara Nexo como un servicio web de Node en Render. Cr
 
 - `TWITCH_CLIENT_ID`: Client ID de la app de Twitch. Nexo usa el flujo de código de dispositivo y no requiere el Client Secret.
 - `APP_PASSWORD`: contraseña compartida para que solo el streamer y los testers abran el panel.
-- `APP_SESSION_SECRET`: Render lo genera automáticamente al crear el Blueprint.
-- `OVERLAY_TOKEN`: clave aleatoria que protege el enlace de OBS. Genérala con `openssl rand -hex 32` y no compartas el enlace públicamente.
+- `APP_SESSION_SECRET`: Render lo genera automáticamente al crear el Blueprint y firma las sesiones.
+- `TOKEN_ENCRYPTION_KEY`: Render genera una clave para cifrar los tokens de Twitch guardados en PostgreSQL. No la cambies después de guardar autorizaciones, o los tokens tendrán que volver a conectarse.
+- `DATABASE_URL`: URL interna de PostgreSQL; el Blueprint la enlaza con `twitch-pro-data`.
+- `TWITCH_CLIENT_SECRET`: opcional si la app de Twitch está configurada como cliente público; es necesario para refrescar tokens de algunos clientes confidenciales.
 - `OPENAI_API_KEY`: opcional para el modo de IA, que crea acertijos únicos y consume créditos de la API. Las plantillas funcionan sin esa clave.
 
-Al terminar el despliegue, Render muestra una URL pública. El panel pide `APP_PASSWORD`. Para OBS usa `https://TU-SERVICIO.onrender.com/?overlay=1&key=TU_OVERLAY_TOKEN`. Mantén esa dirección privada porque permite abrir el overlay del canal.
+Cada streamer inicia sesión en el panel y conecta su propio canal desde **Conectar Twitch**. Al autorizarlo, la app liga el panel a esa cuenta; sus salas, chat y comandos no se mezclan con los de otros canales. Usa **Copiar enlace del overlay** para obtener una dirección privada de OBS que apunta al canal conectado.
 
-El plan gratuito de Render puede suspender servicios después de 15 minutos sin tráfico; la primera apertura posterior puede tardar. Es adecuado para compartir una prueba, no para una transmisión que requiera disponibilidad continua. El despliegue actual conecta un canal por instancia y los tokens de Twitch viven en memoria; si Render reinicia el proceso, hay que volver a autorizar Twitch. No subas `.env` al repositorio. Consulta las [limitaciones actuales del plan gratuito](https://render.com/docs/free) y la [configuración de Blueprints](https://render.com/docs/blueprint-spec).
+El Blueprint usa PostgreSQL gratuito para una prueba. Render elimina el acceso a esa base a los 30 días; antes de ese plazo, actualízala a un plan persistente y verifica que el servicio web también tenga un plan que permita escalar. Los servicios web gratuitos no admiten varias instancias. PostgreSQL conserva tokens cifrados y datos después de reinicios, pero un despliegue a gran escala requiere planes pagos, backups y monitoreo. No subas `.env` al repositorio. Consulta las [limitaciones actuales del plan gratuito](https://render.com/docs/free) y la [configuración de Blueprints](https://render.com/docs/blueprint-spec).
 
 El servicio requiere que este código esté publicado en un repositorio GitHub al que tengas acceso. Render configura el alojamiento desde ese repositorio; el paso de conectar la cuenta y crear el servicio se realiza en el panel de Render.
 
@@ -102,7 +106,8 @@ Los temas propuestos por el chat se revisan antes de crear una sala. Los usuario
 
 ## Archivos
 
-- `server.mjs`: servidor Node, endpoints locales, generación de salas y conexión Twitch.
+- `server.mjs`: servidor Node, endpoints, generación de salas y conexiones Twitch por streamer.
+- `multi-tenant-store.mjs`: PostgreSQL, aislamiento por canal, cifrado de tokens, eventos compartidos y arrendamientos de conexiones.
 - `room-templates.mjs`: catálogo y construcción determinista de salas sin API.
 - `app.js`: partida, comandos, Co-Caster y sincronización del overlay.
 - `index.html`, `styles.css`, `enhancements.css`, `scene3d.js`: panel, escena 3D con Three.js y overlay OBS.
