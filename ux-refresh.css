@@ -33,6 +33,7 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .topbar-right { gap: 10px; }
 .connection-state { min-height: 40px; padding: 8px 12px; border: 1px solid var(--ux-border); border-radius: 999px; font-size: 10px; }
 .connect-button { min-height: 44px; padding-inline: 16px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+.public-demo-mode #connectButton, .public-demo-mode #overlayLinkButton, .public-demo-mode #aiModeButton { display: none !important; }
 .icon-button { width: 44px; height: 44px; border-radius: 50%; }
 .workspace { align-items: start; grid-template-columns: minmax(0, 1fr) minmax(360px, 420px); gap: clamp(18px, 2vw, 28px); padding-top: 28px; }
 .stream-column { min-width: 0; }

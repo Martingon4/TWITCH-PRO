@@ -1,0 +1,90 @@
+# Nexo — Twitch Chat Escape Room
+
+Nexo turns a Twitch stream into a cooperative escape room. The streamer sets up a scenario; viewers investigate clues, solve puzzles, unlock a vault, trigger visual styles, and ask Mimo—the visual Co-Caster—to react. The project was built with OpenAI Codex and connects to Twitch chat and EventSub, with a Three.js overlay for OBS.
+
+- **Public, no-login demo:** https://twitch-pro.onrender.com/demo
+- **Streamer dashboard:** https://twitch-pro.onrender.com/ (protected by the private shared dashboard password)
+- **Deployed source branch:** https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
+- **Submission materials:** [Devpost draft and video outline](DEVPOST-SUBMISSION.md)
+- **Video script:** [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md)
+- **Streamer test guide:** [USER-TEST-GUIDE.en.md](USER-TEST-GUIDE.en.md)
+
+The public demo runs a template-based simulation in the visitor's browser. It does not connect to Twitch, call an AI provider, store progress, or expose the protected streamer APIs. Use it to evaluate the game flow without credentials or API costs.
+
+## Features
+
+- Eight selectable escape-room scenarios plus a surprise template. Each has a story, three clues, progressive hints, and a verifiable code.
+- Free template mode; optional Gemini or OpenAI generation for original scenarios.
+- Mimo provides short, friendly Co-Caster reactions with local fallback lines.
+- Twitch chat and channel-point redemption events through EventSub WebSocket.
+- Viewers can investigate clues, solve puzzles, request hints and reactions, and activate safe visual styles.
+- Three.js environments and a private OBS overlay link for the connected Twitch channel.
+- Per-channel room, progress, chat, and encrypted Twitch tokens stored in PostgreSQL.
+
+The app never executes HTML, CSS, or JavaScript supplied by chat. Chat context sent to an AI provider may contain personal information; do not send private data. Nexo reads chat and channel-point redemptions. It does not create, modify, or fulfill Twitch rewards.
+
+## Run locally
+
+Requirements: Node.js 22 or later.
+
+    git clone --branch codex/online-render --single-branch https://github.com/Martingon4/TWITCH-PRO.git
+    cd TWITCH-PRO
+    npm ci
+    cp .env.example .env
+    npm start
+
+Open http://localhost:4173. Without credentials, the local app uses the demo mode and free templates.
+
+For real Twitch testing, set TWITCH_CLIENT_ID in .env before starting the local app. Local development does not require the hosted dashboard password.
+
+## Optional AI scenario generation
+
+Add one provider key to the local .env file or to the Render service's private environment variables:
+
+    GEMINI_API_KEY=your_google_ai_studio_key
+    GEMINI_MODEL=gemini-3.5-flash-lite
+    # Or:
+    OPENAI_API_KEY=your_openai_api_key
+    OPENAI_MODEL=gpt-4.1-mini
+
+AI generation can consume the configured provider's quota or credits. Template mode does not call an AI API. Never commit .env or share API keys.
+
+## Connect a Twitch channel
+
+1. Create a Twitch Developer application and set TWITCH_CLIENT_ID.
+2. Set the Twitch client ID in the local .env or the Render environment.
+3. Open the local dashboard (no hosted password is needed locally) or sign into the protected hosted dashboard, then select **Connect Twitch**.
+4. The channel owner completes Twitch's device authorization flow and approves the requested read scopes.
+5. Use a second Twitch account to send a command in the channel chat.
+6. Copy the private overlay URL from the dashboard into an OBS Browser Source.
+
+Each streamer authorizes their own channel. The current prototype uses one shared dashboard password, while channel data is separated by Twitch User ID.
+
+## Render deployment
+
+The Render Blueprint is in render.yaml. Production requires APP_PASSWORD, APP_SESSION_SECRET, DATABASE_URL, and TOKEN_ENCRYPTION_KEY; the Blueprint generates the session and encryption keys and links PostgreSQL. Add TWITCH_CLIENT_ID, plus optional GEMINI_API_KEY or OPENAI_API_KEY, in Render's private Environment settings.
+
+Render's free web instance may sleep between visits. Check current Render database retention and service limits before using it beyond the hackathon.
+
+## Testing
+
+Start with the public demo at https://twitch-pro.onrender.com/demo. It has no login and stays on free templates. For live Twitch, Gemini, OBS, reward setup, and multi-streamer isolation, follow [USER-TEST-GUIDE.en.md](USER-TEST-GUIDE.en.md).
+
+## Commands
+
+- !ayuda — list the current room's commands.
+- !examinar [object] — reveal that object's riddle.
+- !resolver [object] [answer] — solve the riddle and reveal its digit.
+- !codigo [code] — open the vault when the code is correct.
+- !pista — request a community hint when enough energy is available.
+- !tema [idea] — suggest a scenario for the streamer to review.
+- !estilo [style or visual request] — choose a safe visual style.
+- !reacciona — request a Mimo reaction.
+
+## Project structure
+
+- server.mjs: Node server, Twitch events, API and scenario generation.
+- multi-tenant-store.mjs: PostgreSQL persistence, Twitch token encryption, channel isolation and event leases.
+- room-templates.mjs: free offline scenario templates.
+- app.js: game flow, commands, Mimo, and overlay synchronization.
+- index.html, styles.css, enhancements.css, ux-refresh.css, scene3d.js: dashboard and Three.js overlay.

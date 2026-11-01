@@ -27,6 +27,7 @@ const EVENTSUB_URL = "wss://eventsub.wss.twitch.tv/ws";
 const staticFiles = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
+  ["/demo", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
   ["/room-templates.mjs", ["room-templates.mjs", "text/javascript; charset=utf-8"]],
   ["/scene3d.js", ["scene3d.js", "text/javascript; charset=utf-8"]],

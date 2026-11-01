@@ -1,6 +1,11 @@
 # Nexo — Escape Room del chat
 
-Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room en vivo. El streamer revisa las ideas de tema, el chat busca pistas y puede rediseñar la escena con comandos de estilo seguros. Mimo —el Co-Caster visual— cambia de expresión y reacciona a los momentos de la partida.
+Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room en vivo. El streamer revisa las ideas de tema, el chat busca pistas y puede rediseñar la escena con comandos de estilo seguros. Mimo —el Co-Caster visual— cambia de expresión y reacciona a los momentos de la partida. El proyecto se desarrolló con OpenAI Codex y conecta la experiencia a Twitch mediante chat, EventSub y un overlay para OBS.
+
+- **Demo pública sin contraseña:** https://twitch-pro.onrender.com/demo (simulación gratuita con plantillas; no conecta Twitch ni consume API).
+- **Panel privado del streamer:** https://twitch-pro.onrender.com/ (requiere la contraseña privada del panel).
+- **Rama de código desplegada:** https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render. El servicio de Render sigue esta rama; usa este enlace para revisar la versión actual.
+- **Documentación de entrega en inglés:** [README.en.md](README.en.md), [USER-TEST-GUIDE.en.md](USER-TEST-GUIDE.en.md), [DEVPOST-SUBMISSION.md](DEVPOST-SUBMISSION.md) y [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md).
 
 ## Funciones
 
@@ -20,11 +25,11 @@ Cada autorización identifica un canal por su Twitch User ID. PostgreSQL separa 
 ## Requisitos y arranque
 
 - Node.js 22 o posterior.
-- Opcionales: una clave de OpenAI API y una aplicación de Twitch Developer Console.
+- Opcionales: una clave de Gemini u OpenAI API y una aplicación de Twitch Developer Console.
 
 ```bash
 npm install
-cp .env.example .env # si aún no existe .env
+cp .env.example .env
 npm start
 ```
 
@@ -33,6 +38,14 @@ Abre `http://localhost:4173`. No se necesitan paquetes adicionales. Sin credenci
 ## Prueba de usuario
 
 Para que un streamer o compañero recorra la experiencia como usuario, sigue la [guía de prueba de usuario](GUIA-PRUEBA-STREAMER.md). Incluye los flujos demo, Twitch en vivo y OBS, criterios de aceptación y un formato para reportar resultados.
+
+Para clonar exactamente la versión que se ejecuta en Render:
+
+```bash
+git clone --branch codex/online-render --single-branch https://github.com/Martingon4/TWITCH-PRO.git
+```
+
+La rama predeterminada `main` todavía no contiene esta versión. Revisa el enlace a `codex/online-render` antes de descargar o enviar el repositorio a evaluación.
 
 ## Activar la generación de escenarios con IA
 
@@ -67,12 +80,15 @@ El archivo `render.yaml` prepara Nexo como un servicio web de Node en Render. Cr
 - `DATABASE_URL`: URL interna de PostgreSQL; el Blueprint la enlaza con `twitch-pro-data`.
 - `TWITCH_CLIENT_SECRET`: opcional si la app de Twitch está configurada como cliente público; es necesario para refrescar tokens de algunos clientes confidenciales.
 - `OPENAI_API_KEY`: opcional para el modo de IA, que crea acertijos únicos y consume créditos de la API. Las plantillas funcionan sin esa clave.
+- `GEMINI_API_KEY`: opcional; se configura en Render para activar la generación con Gemini.
 
 Cada streamer inicia sesión en el panel y conecta su propio canal desde **Conectar Twitch**. Al autorizarlo, la app liga el panel a esa cuenta; sus salas, chat y comandos no se mezclan con los de otros canales. Usa **Copiar enlace del overlay** para obtener una dirección privada de OBS que apunta al canal conectado.
 
 El Blueprint usa PostgreSQL gratuito para una prueba. Render elimina el acceso a esa base a los 30 días; antes de ese plazo, actualízala a un plan persistente y verifica que el servicio web también tenga un plan que permita escalar. Los servicios web gratuitos no admiten varias instancias. PostgreSQL conserva tokens cifrados y datos después de reinicios, pero un despliegue a gran escala requiere planes pagos, backups y monitoreo. No subas `.env` al repositorio. Consulta las [limitaciones actuales del plan gratuito](https://render.com/docs/free) y la [configuración de Blueprints](https://render.com/docs/blueprint-spec).
 
 El servicio requiere que este código esté publicado en un repositorio GitHub al que tengas acceso. Render configura el alojamiento desde ese repositorio; el paso de conectar la cuenta y crear el servicio se realiza en el panel de Render.
+
+Para evaluación, comparte la demo pública de plantillas y estos pasos: abre `/demo`, elige una escena, crea la sala y sigue los comandos que aparecen. Para demostrar la conexión real, muestra el panel privado y el overlay con un canal Twitch de prueba; no compartas la contraseña ni la URL privada del overlay.
 
 ## Recompensas de puntos
 

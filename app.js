@@ -3,6 +3,7 @@
   const syncThreeScene = (event, detail = {}) => window.dispatchEvent(new CustomEvent(`nexo:${event}`, { detail }));
   const pageParams = new URLSearchParams(location.search);
   const overlayMode = pageParams.get("overlay") === "1";
+  const publicDemoMode = location.pathname === "/demo";
   const eventClientId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   function apiPath(path) {
     const url = new URL(path, location.href);
@@ -140,6 +141,10 @@ card.dataset.mood = mood;
 
   async function requestCaster(trigger) {
     if (state.casterBusy) return;
+    if (publicDemoMode) {
+      setCaster(randomLine(trigger), true, "plantilla", casterMood(trigger));
+      return;
+    }
     state.casterBusy = true;
     try {
       const result = await api("/api/caster", { method: "POST", body: JSON.stringify({ trigger, context: state.chatContext.slice(-8) }) });
@@ -740,7 +745,16 @@ card.dataset.mood = mood;
     $("roomSourceBadge").textContent = state.roomMode === "ai" ? "GENERANDO SALA…" : "CARGANDO PLANTILLA…";
     $("roomSourceBadge").classList.remove("source-ai", "source-template");
     try {
-      const result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt, mode: state.roomMode, templateId: state.selectedTemplateId, provider: state.aiProvider }) });
+      let result;
+      if (publicDemoMode) {
+        const templates = await import("./room-templates.mjs");
+        result = {
+          room: templates.buildTemplateRoom(prompt, state.selectedTemplateId),
+          note: "Demo pública: sala simulada en este navegador; no conecta Twitch ni usa APIs de IA.",
+        };
+      } else {
+        result = await api("/api/rooms/generate", { method: "POST", body: JSON.stringify({ theme: prompt, mode: state.roomMode, templateId: state.selectedTemplateId, provider: state.aiProvider }) });
+      }
       state.serverAvailable = true;
       applyRoom(result.room, result.note);
       if (["openai", "gemini"].includes(result.room?.source)) requestCaster("room");
@@ -811,6 +825,7 @@ card.dataset.mood = mood;
   }
 
   function connectEvents() {
+    if (publicDemoMode) return;
     if (typeof EventSource !== "function") return;
     try {
       state.eventSource?.close();
@@ -851,6 +866,7 @@ card.dataset.mood = mood;
   }
 
   async function checkServer() {
+    if (publicDemoMode) return null;
     try {
       const status = await api("/api/status");
       state.serverAvailable = true;
@@ -963,6 +979,7 @@ card.dataset.mood = mood;
     createRoom($("themeInput").value);
   });
   function selectRoomMode(mode) {
+    if (publicDemoMode && mode === "ai") return;
     state.roomMode = mode === "ai" ? "ai" : "template";
     const isAI = state.roomMode === "ai";
     $("templateModeButton").classList.toggle("active", !isAI);
@@ -971,9 +988,11 @@ card.dataset.mood = mood;
     $("aiModeButton").setAttribute("aria-pressed", String(isAI));
     $("generateButton").innerHTML = isAI ? "CREAR CON IA <span>↗</span>" : "CREAR SALA <span>↗</span>";
     $("aiProviderOptions").hidden = !isAI;
-    const statusText = isAI
-      ? `IA ${state.aiProvider.toUpperCase()} · ${state.aiProviders[state.aiProvider] ? "LISTA · PUEDE CONSUMIR CUOTA" : `FALTA ${state.aiProvider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY"}`}`
-      : "PLANTILLAS GRATIS · SIN CONSUMO DE API";
+    const statusText = publicDemoMode
+      ? "DEMO GRATUITA · SIN TWITCH NI API"
+      : isAI
+        ? `IA ${state.aiProvider.toUpperCase()} · ${state.aiProviders[state.aiProvider] ? "LISTA · PUEDE CONSUMIR CUOTA" : `FALTA ${state.aiProvider === "gemini" ? "GEMINI_API_KEY" : "OPENAI_API_KEY"}`}`
+        : "PLANTILLAS GRATIS · SIN CONSUMO DE API";
     $("aiStatus").innerHTML = `<span class="ai-indicator"></span>${statusText}`;
   }
   function updateAIProviderControls() {
@@ -1054,6 +1073,17 @@ card.dataset.mood = mood;
   state.recentCommands = loadRecentCommands();
   renderRecentCommands();
   document.body.classList.toggle("overlay-mode", overlayMode);
+  if (publicDemoMode) {
+    document.body.classList.add("public-demo-mode");
+    $("connectButton").hidden = true;
+    $("overlayLinkButton").hidden = true;
+    $("aiModeButton").hidden = true;
+    $("aiProviderOptions").hidden = true;
+    $("connectionLabel").textContent = "DEMO PÚBLICA";
+    $("chatModeLabel").textContent = "SIMULACIÓN LOCAL";
+    $("aiStatus").innerHTML = '<span class="ai-indicator"></span>DEMO GRATUITA · SIN TWITCH NI API';
+    $("creationHint").textContent = "Elige una plantilla, crea una sala y prueba los comandos simulados. La demo no inicia sesión ni guarda datos.";
+  }
   connectEvents();
   checkServer().then((status) => { if (!status?.twitch?.id) seedChat(); });
   selectRoomMode("template");

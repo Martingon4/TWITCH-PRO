@@ -1,193 +1,93 @@
-# Prueba de usuario: Nexo desde la perspectiva de un streamer
+# Guía de prueba de usuario — Nexo
 
-Esta guía permite que una persona pruebe Nexo como streamer, sin revisar el código. La prueba busca responder: **¿puede entender cómo conectar su canal, iniciar una sala y hacer que el chat participe durante la transmisión?**
+Nexo convierte la sala del streamer en un escape room cooperativo. El streamer prepara el escenario; el chat busca pistas, resuelve acertijos, activa estilos visuales y hace reaccionar a Mimo, el Co-Caster.
 
-## Qué estamos probando
+## Enlaces
 
-Nexo es una experiencia de Escape Room cooperativo para Twitch. El streamer crea el reto y lo muestra en OBS; los espectadores participan desde el chat para descubrir pistas, abrir la bóveda, votar efectos visuales y pedir reacciones de Mimo.
+- Demo pública sin contraseña: https://twitch-pro.onrender.com/demo
+- Panel privado del streamer: https://twitch-pro.onrender.com/
+- Código de la versión desplegada: https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 
-La prueba se hace con **un canal** para validar el recorrido principal de principio a fin. No pretende demostrar todavía una plataforma con varios streamers conectados simultáneamente.
+La demo pública funciona como simulación local en el navegador. Usa plantillas gratuitas, no conecta una cuenta de Twitch, no llama a Gemini/OpenAI y no guarda el progreso. El panel principal está protegido y es el que se usa para conectar un canal real.
 
-## Antes de empezar
+## A. Probar como espectador, sin instalar nada
 
-Para la prueba en modo demo:
+1. Abre la demo pública.
+2. Elige una de las ocho tarjetas de escenario o escribe una situación breve.
+3. Pulsa **Crear sala**. Revisa el resumen, los objetos y el primer comando que recomienda la sala.
+4. Escribe en el chat simulado el comando que aparece en pantalla. Usa los nombres y respuestas que muestra esta sala; cambian entre escenarios.
+5. Prueba `!ayuda`, `!examinar [objeto]`, `!resolver [objeto] [respuesta]`, `!pista`, `!codigo [código]`, `!estilo [diseño]` y `!reacciona`.
+6. Observa las pistas, el progreso del equipo, la bóveda, los efectos Three.js y las respuestas visuales de Mimo.
 
-- Una computadora con Node.js 22 o posterior y conexión a internet.
-- El proyecto descargado o clonado desde GitHub.
-- No hace falta una cuenta de Twitch, una clave de OpenAI ni OBS para recorrer la interfaz y simular comandos.
+En esta página, los comandos no se publican en Twitch. Es una demo para que cualquiera pueda probar el concepto sin credenciales ni gasto de API.
 
-Para probar Twitch en vivo, además:
+## B. Probar como streamer, en Twitch
 
-- Una cuenta de Twitch que controle el canal de prueba y pueda autorizar la aplicación.
-- El Client ID de una aplicación registrada en [Twitch Developer Console](https://dev.twitch.tv/console/apps).
-- Idealmente, una segunda cuenta que actúe como espectador y escriba comandos en el chat.
-- Para probar canjes, el canal debe tener puntos y recompensas personalizadas configuradas.
+### Antes de comenzar
 
-En esta versión, se debe autorizar la cuenta propietaria del canal que se va a probar. No conectes una cuenta de espectador como si fuera el canal del streamer.
+- Abre el panel principal de Render y usa la contraseña privada del panel.
+- El dueño del canal de prueba debe tener acceso a la aplicación de Twitch y aprobar el flujo de código de dispositivo.
+- Usa una segunda cuenta como espectador para escribir comandos reales en el chat del canal.
+- Node.js 22+ y una instalación local solo hacen falta si se prueba desde el código fuente.
 
-La clave de OpenAI es opcional. Sin ella, Nexo usa una sala y reacciones de respaldo. **No compartas archivos `.env`, tokens ni secretos de Twitch u OpenAI**; cada tester debe guardar sus credenciales localmente. El flujo actual no necesita un Client Secret de Twitch.
+No publiques la contraseña del panel, enlaces de overlay, códigos de activación, tokens ni claves de API. Nexo no necesita que el espectador autorice la aplicación; solo el streamer conecta el canal.
 
-## Preparar Nexo
+### Conectar y empezar una partida
 
-En la carpeta del proyecto, ejecuta:
+1. Abre https://twitch-pro.onrender.com/ e inicia sesión.
+2. Pulsa **Conectar Twitch**. Abre Twitch Activate y autoriza los permisos de lectura solicitados.
+3. Espera a que el panel muestre el canal conectado.
+4. Elige un escenario o escribe una situación y pulsa **Crear sala**. El modo **Plantilla · gratis** no consume créditos. **IA · con créditos** usa el proveedor seleccionado y puede generar cargos/cuota.
+5. En OBS, añade una **Fuente de navegador** y pega la URL privada que copia el botón de overlay del panel conectado. No uses `localhost` en OBS si Render aloja la app.
+6. Desde la segunda cuenta de Twitch, prueba los comandos que aparecen en el panel, por ejemplo `!examinar [objeto]` y `!resolver [objeto] [respuesta]`.
+7. Completa las tres pistas y escribe el código indicado por la sala para abrir la bóveda. Prueba también `!estilo ...`, `!reacciona` y `!tema ...`.
 
-```bash
-npm install
-cp .env.example .env
-```
+La propuesta `!tema ...` se envía al panel para que el streamer la revise; no crea una sala automáticamente. Mimo se muestra en el panel/overlay y no escribe mensajes en el chat de Twitch.
 
-Edita `.env` solo en la computadora de prueba:
+### Probar Gemini (opcional)
 
-```env
-TWITCH_CLIENT_ID=el_client_id_de_la_aplicacion
-```
+En el panel privado selecciona **IA · con créditos**, elige Gemini y escribe una situación concreta. La solicitud usa la clave configurada en Render y puede consumir cuota de Google. La demo pública no ofrece generación con IA. Si el proveedor falla, el panel indica el motivo y carga una plantilla.
 
-Para habilitar la generación de salas y comentarios de Mimo con IA, agrega también una clave propia:
+### Probar puntos de canal (opcional)
 
-```env
-OPENAI_API_KEY=tu_clave_local
-OPENAI_MODEL=gpt-4.1-mini
-```
+El streamer debe crear en Twitch recompensas personalizadas con estos nombres exactos: `Nexo · Pista`, `Nexo · Estilo`, `Nexo · Tema` y `Nexo · Mimo`. Después de volver a autorizar permisos de canjes, prueba cada recompensa desde otra cuenta. Nexo escucha los canjes, pero no crea ni administra las recompensas.
 
-Inicia el servidor:
+## C. Probar aislamiento entre streamers (opcional)
 
-```bash
-npm start
-```
+1. Autoriza dos canales de prueba distintos, cada uno desde su propio panel/sesión.
+2. Crea una sala y envía comandos en cada canal.
+3. Comprueba que las salas, progreso y chat de cada canal no se mezclen.
 
-Abre `http://localhost:4173` en el mismo equipo. No cierres la terminal mientras dure la prueba. Si el puerto ya está ocupado, detén el proceso anterior con `Ctrl+C` antes de volver a iniciar Nexo.
-
-### Si Nexo ya está publicado en Render
-
-El streamer y el tester abren la URL pública que te dio Render; no instalan Node ni ejecutan una terminal. Comparte la contraseña del panel por un medio privado. El streamer conecta la cuenta que controla el canal de prueba.
-
-Para OBS, el streamer copia la URL del overlay con su `OVERLAY_TOKEN` desde la configuración del servicio. Esa URL es privada; no la incluyas en mensajes públicos ni capturas. Render gratuito puede tardar en responder después de un periodo sin tráfico, y un reinicio del servicio requiere volver a conectar Twitch.
-
-## Guion de la prueba
-
-Pídele al tester que piense en voz alta y no le expliques los controles de antemano. Observa dónde duda y anota sus palabras.
-
-### A. Primera impresión
-
-1. Abre `http://localhost:4173`.
-2. Pregunta: “¿Qué crees que hace esta herramienta y qué harías primero para usarla en tu stream?”
-3. Comprueba si identifica que el chat juega en equipo y que el streamer prepara la sala.
-
-**Se espera:** que entienda la propuesta desde el panel y encuentre el control para conectar Twitch y crear una sala.
-
-### B. Crear una sala
-
-1. Describe una situación concreta en el campo de creación, por ejemplo: `la nave perdió oxígeno y el chat debe reiniciar sus motores antes de que se agote la reserva`.
-2. Pulsa **Crear sala**.
-3. Observa el título, el texto de apertura y el cambio visual del ambiente.
-
-**Se espera:** que la historia y los acertijos utilicen esa situación. Con OpenAI configurado aparecen objetos y acertijos generados para el escenario; sin clave, el panel indica que se está usando la plantilla de respaldo.
-
-### C. Jugar en modo demo
-
-Usa el campo de chat que aparece dentro del panel. Ese campo simula participantes locales; **no publica mensajes en Twitch**.
-
-Prueba estos comandos, uno por uno:
-
-```text
-!ayuda
-!examinar reloj
-!resolver reloj 2
-!examinar estatua
-!resolver estatua 4
-!examinar antorcha
-!resolver antorcha 1
-!codigo 241
-```
-
-Los nombres de los objetos y las respuestas cambian al generar una sala con IA. Usa el nombre que aparece en la escena, primero `!examinar [objeto]` para leer el acertijo y luego `!resolver [objeto] [respuesta]`. Al completar los tres, la interfaz muestra el orden del código. `!codigo 241` abre directamente la bóveda en la plantilla de respaldo; cualquier combinación correcta la abre aunque no se hayan resuelto los tres acertijos.
-
-Luego prueba:
-
-```text
-!estilo neon
-!reacciona
-!canje pista
-!canje estilo ambar
-!canje tema bosque
-!canje mimo
-```
-
-**Se espera:** pistas visibles en la escena, progreso compartido, apertura de la bóveda, cambios de estilo y una reacción de Mimo. Las propuestas `!tema` y `!canje tema ...` deben quedar para que el streamer las revise; no inician una sala por sí solas.
-
-### D. Conectar Twitch (prueba en vivo, opcional)
-
-1. Pulsa **Conectar Twitch**.
-2. Abre el enlace de activación, ingresa el código mostrado y autoriza los permisos solicitados.
-3. Espera a que el estado cambie a **Twitch · nombre_de_cuenta** o a **Chat conectado**.
-4. Desde otra cuenta, envía `!ayuda` o `!examinar reloj` en el chat del canal autorizado.
-
-**Se espera:** que el mensaje real aparezca en el panel y que el comando afecte la misma sala. Escribir en el simulador local del panel no sirve para comprobar Twitch.
-
-Si el estado dice **Chat de Twitch** en vez de **Chat + puntos**, la lectura del chat funciona, pero los canjes no quedaron disponibles. Eso no impide jugar con comandos.
-
-### E. Verlo como espectador en OBS (opcional)
-
-En OBS, agrega una **Fuente de navegador** con:
-
-```text
-http://localhost:4173/?overlay=1
-```
-
-Usa el mismo equipo donde se ejecuta Nexo. Interactúa con la sala desde el panel o con comandos reales de Twitch y comprueba que la escena del overlay refleje los cambios.
-
-### F. Probar recompensas de puntos (opcional)
-
-En el panel de Twitch del canal de prueba, crea manualmente recompensas personalizadas con estos títulos exactos:
-
-- `Nexo · Pista`
-- `Nexo · Estilo`
-- `Nexo · Tema`
-- `Nexo · Mimo`
-
-Para `Nexo · Estilo`, configura el mensaje para que el espectador escriba `neon`, `ambar` o `bruma`. Para `Nexo · Tema`, pide una idea de sala. Canjea cada recompensa y anota si la acción esperada ocurre. Nexo escucha estos canjes, pero no crea ni administra las recompensas de Twitch.
+La aplicación separa el estado por Twitch User ID y persiste los tokens cifrados en PostgreSQL. El acceso al panel en este prototipo usa una contraseña compartida; cada streamer vincula su propio canal de Twitch.
 
 ## Lista de aceptación
 
-Marca cada punto como **Sí**, **No** o **No probado**:
+- [ ] Una persona puede probar el flujo de sala en la demo pública sin iniciar sesión.
+- [ ] El panel deja claro qué modo consume API y cuál usa plantillas gratuitas.
+- [ ] El streamer conecta su canal de Twitch y el chat real llega al panel.
+- [ ] Los comandos del chat actualizan la misma sala y abren la bóveda con el código correcto.
+- [ ] El overlay de OBS refleja la sala conectada.
+- [ ] Mimo y los estilos hacen visible la participación sin ejecutar código enviado por espectadores.
+- [ ] Dos canales de prueba mantienen salas y chat separados.
+- [ ] Una persona puede explicar qué aporta Nexo después de probarlo.
 
-- [ ] Entendí en menos de un minuto qué aporta Nexo a mi transmisión.
-- [ ] Pude encontrar cómo crear una sala y completar el reto.
-- [ ] Entendí qué hacen los comandos y dónde escribirlos.
-- [ ] La escena y las reacciones de Mimo hicieron visible la participación del chat.
-- [ ] Pude distinguir el chat simulado del chat real de Twitch.
-- [ ] Pude conectar Twitch o entendí qué dato faltaba para hacerlo.
-- [ ] Pude encontrar cómo mostrar la escena en OBS.
-- [ ] Usaría esta dinámica durante una transmisión. ¿Por qué?
-
-## Formato para reportar resultados
-
-Completa y devuelve esta sección junto con capturas si ayudan a explicar un problema. Antes de compartir capturas, oculta códigos de activación, tokens, correos y cualquier credencial.
+## Incidencias
 
 ```text
-Tester / fecha:
-Modo: demo / Twitch en vivo / OBS
-Canal de prueba (opcional):
-Sistema y navegador:
-
-¿Qué pensaste que hacía Nexo antes de probarlo?
-¿En qué paso dudaste o te detuviste?
-¿Qué parte fue más útil para tu stream?
-¿Qué parte no usarías o cambiarías?
-¿Volverías a usarlo en otra transmisión? ¿Por qué?
-
-Problema observado:
-Pasos para reproducirlo:
-Qué esperabas:
+Fecha / navegador:
+Demo pública o panel streamer:
+Paso que estaba probando:
+Qué esperaba:
 Qué ocurrió:
-Captura (sin credenciales):
+¿Se pudo repetir?:
+Captura (oculta códigos, nombres privados y credenciales):
 ```
 
-## Límites de esta versión
+## Límites conocidos
 
-- Conecta un canal por instancia local; no administra varios streamers a la vez.
-- El token de Twitch vive en memoria y se pierde cuando se apaga el servidor; habrá que conectar de nuevo al reiniciar.
-- Mimo aparece como Co-Caster visual; no envía mensajes al chat ni habla con voz.
-- Los estilos del chat están limitados a neón, ámbar y bruma; el chat no ejecuta CSS o código.
-- Las propuestas de tema requieren que el streamer las revise y pulse **Crear sala**.
-- La prueba mide si la experiencia se entiende y genera participación. No demuestra por sí sola un aumento de audiencia o visualizaciones.
+- La demo pública es una simulación local, sin conexión Twitch ni persistencia.
+- El panel de streamer requiere la contraseña compartida y autorización individual de Twitch.
+- Las claves de IA pertenecen a la cuenta configurada en Render y las generaciones pueden consumir cuota.
+- Los mensajes de chat enviados a Mimo pueden incluirse en el contexto de la API; no envíes información privada.
+- Nexo facilita participación y contenido compartido, pero no demuestra por sí solo un aumento de audiencia o visualizaciones.
+- El plan gratuito de Render puede dormir por inactividad y la base gratuita tiene límites de retención/recursos. Revisa las condiciones actuales antes de mantener la app después del hackathon.
