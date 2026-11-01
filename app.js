@@ -198,7 +198,7 @@
     caption.lastElementChild.textContent = String(message).slice(0, 180);
     caption.classList.add("visible");
     window.clearTimeout(state.captionTimer);
-    state.captionTimer = window.setTimeout(() => caption.classList.remove("visible"), 4500);
+    state.captionTimer = window.setTimeout(() => caption.classList.remove("visible"), 30_000);
   }
 
   function rewardUser(user, points, cooldown = 0) {
@@ -305,7 +305,7 @@
     state.examined[id] = true;
     $(meta.display).textContent = "ACERTIJO ACTIVO";
     $(meta.card).classList.add("examined");
-    addMessage({ user: "Sistema", text: `${user} encontró un acertijo en ${clue.name}. Resuélvanlo y escriban !resolver ${id} [respuesta].`, system: true, highlight: true });
+    addMessage({ user: "Sistema", text: `${user} encontró un acertijo en ${clue.name}. Resuélvanlo y escriban !resolver ${String(clue.name || id).toLocaleLowerCase("es")} [respuesta].`, system: true, highlight: true });
     showCaption(clue.riddle || clue.caption);
     showEvent(`Acertijo encontrado · ${clue.name}`);
   }
@@ -314,11 +314,11 @@
     const [objectName = "", ...answerParts] = String(args || "").trim().split(/\s+/);
     const id = resolveObjectId(objectName);
     const clue = state.room.clues[id];
-    if (!clue) return showCaption("Indica el objeto: !resolver reloj [respuesta]. Los nombres de esta sala aparecen en el panel.");
-    if (!state.examined[id]) return showCaption(`Primero examinen ${clue.name}: !examinar ${id}.`);
+    if (!clue) return showCaption("Indica el objeto: !resolver [objeto] [respuesta]. Los nombres de esta sala aparecen en el panel.");
+    if (!state.examined[id]) return showCaption(`Primero examinen ${clue.name}: !examinar ${String(clue.name || id).toLocaleLowerCase("es")}.`);
     if (state.clues[id]) return showCaption(`${clue.name} ya está resuelto; la cifra es ${clue.digit}.`);
     const answer = answerParts.join(" ");
-    if (!answer) return showCaption(`Escribe tu solución: !resolver ${id} [respuesta].`);
+    if (!answer) return showCaption(`Escribe tu solución: !resolver ${String(clue.name || id).toLocaleLowerCase("es")} [respuesta].`);
     if (!answerMatchesClue(answer, clue)) {
       addMessage({ user: "Sistema", text: `La respuesta de ${user} no coincide con el acertijo de ${clue.name}.`, system: true });
       showCaption("Esa respuesta no encaja. Revisen los datos o pidan !pista.");
@@ -463,7 +463,7 @@
         $("energyValue").textContent = String(state.energy);
         $("energyFill").style.width = `${state.energy}%`;
         showCaption(`${state.room.clues[missingId].name}: ${state.room.clues[missingId].hint}`);
-        addMessage({ user: "Sistema", text: `El equipo desbloqueó una pista para ${missingId}.`, system: true, highlight: true });
+        addMessage({ user: "Sistema", text: `El equipo desbloqueó una pista para ${state.room.clues[missingId].name}.`, system: true, highlight: true });
         requestCaster("hint");
       } else showCaption(`Ya tienen todas las pistas. ¡Prueben !codigo ${getCode()}!`);
       return;
