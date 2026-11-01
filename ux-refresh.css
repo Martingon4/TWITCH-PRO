@@ -315,3 +315,85 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   .scenario-card, .workflow-nav a, .connect-button, .send-button { border: 1px solid ButtonText; }
   .scenario-grid .scenario-card.selected { outline: 2px solid Highlight; }
 }
+
+/* Mimo: clearer character state, speech feedback, and synchronized scene reactions. */
+.caster-card {
+  --mimo-accent: #a9e974;
+  --mimo-halo: #8ee85b55;
+  isolation: isolate;
+  min-height: 76px;
+  border-color: color-mix(in srgb, var(--mimo-accent) 56%, transparent);
+  border-radius: 16px;
+  background: linear-gradient(115deg, #11191cf2, #202638ed 70%, #29203af0);
+  box-shadow: 0 12px 34px #0008, 0 0 28px var(--mimo-halo);
+}
+.caster-card::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 8% 50%, color-mix(in srgb, var(--mimo-accent) 19%, transparent), transparent 58%);
+  content: "";
+  pointer-events: none;
+}
+.caster-avatar {
+  flex-basis: 46px;
+  width: 46px;
+  height: 46px;
+  border-width: 2px;
+  background: radial-gradient(circle at 35% 25%, #f5ffcd, #b8ee76 35%, #548346 72%, #283c38);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mimo-accent) 20%, transparent), 0 0 22px var(--mimo-halo);
+}
+.caster-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.caster-name { color: var(--mimo-accent); font-size: 10px; letter-spacing: .12em; }
+.caster-mood {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--mimo-accent) 38%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mimo-accent) 10%, #101418);
+  color: #e2eddb;
+  font: 7px var(--mono);
+  letter-spacing: .08em;
+}
+.caster-copy p { margin-top: 6px; font-size: 12px; line-height: 1.48; }
+.caster-sound { opacity: .28; transition: opacity .2s; }
+.caster-card.speaking .caster-sound { opacity: 1; }
+.caster-card.speaking .caster-sound i { animation-duration: .42s; }
+.caster-card.speaking .caster-avatar { animation: mimoSpeak .42s ease-in-out 3; }
+.caster-card.speaking .caster-mouth { animation: mimoTalk .22s ease-in-out 5 alternate; }
+.caster-spark { position: absolute; top: -5px; right: -5px; color: #fff1a9; font-size: 12px; text-shadow: 0 0 12px var(--mimo-accent); animation: mimoSpark 2.8s ease-in-out infinite; }
+.caster-eye { transform-origin: center; animation: mimoBlink 5.4s ease-in-out infinite; }
+.caster-card.mood-curious { --mimo-accent: #c7a9ff; --mimo-halo: #a47bff55; }
+.caster-card.mood-worried { --mimo-accent: #8ccaff; --mimo-halo: #70baff55; }
+.caster-card.mood-excited { --mimo-accent: #d9ff7a; --mimo-halo: #bdf65c77; }
+.caster-card.mood-style { --mimo-accent: #ff8bdc; --mimo-halo: #ff5acb66; }
+.caster-card.caster-ai { --mimo-accent: #8cf4e7; --mimo-halo: #53e6d477; }
+.caster-card.quiet .caster-sound, .caster-card.quiet .caster-spark { opacity: .2; }
+.scene.mimo-reacting .door-glow { animation: mimoDoorBurst 1.35s ease-out; }
+.scene.mimo-reacting .room-three-canvas { filter: saturate(1.72) brightness(1.2); }
+.scene.mimo-reacting .room-art { animation: mimoRoomPulse .85s ease-out; }
+.scene.mimo-curious { --mimo-flare: #c8a6ff; }
+.scene.mimo-worried { --mimo-flare: #78bfff; }
+.scene.mimo-excited { --mimo-flare: #d5ff76; }
+.scene.mimo-style { --mimo-flare: #ff79d7; }
+.scene.mimo-reacting .scene-caption { border-color: color-mix(in srgb, var(--mimo-flare, #c6f36a) 58%, transparent); }
+@keyframes mimoBlink { 0%, 44%, 48%, 100% { transform: scaleY(1); } 46% { transform: scaleY(.12); } }
+@keyframes mimoTalk { from { height: 3px; border-bottom-width: 1px; } to { height: 9px; border-bottom-width: 2px; } }
+@keyframes mimoSpeak { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.04); } }
+@keyframes mimoSpark { 0%, 100% { opacity: .5; transform: scale(.8) rotate(-10deg); } 50% { opacity: 1; transform: scale(1.2) rotate(16deg); } }
+@keyframes mimoDoorBurst { 0% { filter: blur(16px); opacity: .65; } 45% { filter: blur(34px); opacity: 1; } 100% { filter: blur(24px); opacity: .8; } }
+@keyframes mimoRoomPulse { 0%, 100% { filter: brightness(1); } 38% { filter: brightness(1.17) saturate(1.16); } }
+@media (max-width: 760px) {
+  .caster-card { min-height: 72px; }
+  .caster-mood { min-height: 16px; font-size: 6px; }
+  .caster-copy p { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caster-eye, .caster-spark { animation: none; }
+  .caster-card.speaking .caster-avatar, .caster-card.speaking .caster-mouth,
+  .scene.mimo-reacting .door-glow, .scene.mimo-reacting .room-art { animation: none; }
+  .scene.mimo-reacting .room-three-canvas { filter: none; }
+}

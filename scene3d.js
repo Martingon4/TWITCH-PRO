@@ -174,6 +174,8 @@ if (canvas && host && sceneElement) {
     let motion = "glow";
     let opening = false;
     let pulseUntil = 0;
+    let reactionUntil = 0;
+    let reactionMood = "playful";
 
     function applyPalette() {
       const palette = environments[environment] || environments.underwater;
@@ -237,6 +239,10 @@ if (canvas && host && sceneElement) {
       applyPalette();
     });
     window.addEventListener("nexo:clue", () => { pulseUntil = performance.now() + 1200; });
+    window.addEventListener("nexo:reaction", (event) => {
+      reactionMood = ["curious", "worried", "excited", "style", "playful"].includes(event.detail?.mood) ? event.detail.mood : "playful";
+      reactionUntil = performance.now() + 1500;
+    });
     window.addEventListener("nexo:open", () => { opening = true; });
     window.addEventListener("nexo:reset", () => { opening = false; });
 
@@ -244,6 +250,12 @@ if (canvas && host && sceneElement) {
     function render() {
       const delta = Math.min(clock.getDelta(), 0.05);
       const elapsed = clock.elapsedTime;
+      const reactionProgress = THREE.MathUtils.clamp(1 - (reactionUntil - performance.now()) / 1500, 0, 1);
+      const reactionStrength = reactionUntil > performance.now() ? Math.sin(reactionProgress * Math.PI) : 0;
+      const reactionTint = { curious: 0xc8a6ff, worried: 0x78bfff, excited: 0xd5ff76, style: 0xff79d7, playful: 0x8debd5 }[reactionMood];
+      keyLight.intensity = 3.4 + reactionStrength * (reactionMood === "excited" ? 2.2 : 1.15);
+      rimLight.intensity = 1.9 + reactionStrength * 1.1;
+      rimLight.color.setHex(reactionStrength > 0.02 ? reactionTint : (environments[environment] || environments.underwater).secondary);
       rings[0].rotation.z = Math.sin(elapsed * 0.18) * 0.08;
       rings[1].rotation.z += delta * 0.12;
       rings[2].rotation.y = Math.sin(elapsed * 0.24) * 0.3;
@@ -251,7 +263,7 @@ if (canvas && host && sceneElement) {
       core.rotation.x += delta * 0.2;
       core.rotation.y -= delta * 0.32;
       const corePulse = 0.88 + (Math.sin(elapsed * 1.5) + 1) * 0.12;
-      const designPulse = motion === "pulse" ? 1 + (Math.sin(elapsed * 3.2) + 1) * 0.025 : 1;
+      const designPulse = (motion === "pulse" ? 1 + (Math.sin(elapsed * 3.2) + 1) * 0.025 : 1) * (1 + reactionStrength * 0.055);
       core.scale.setScalar(corePulse * designPulse);
       coreHalo.material.opacity = 0.12 + (Math.sin(elapsed * 1.4) + 1) * 0.05;
       if (motion === "aurora") {
@@ -261,7 +273,7 @@ if (canvas && host && sceneElement) {
         coreHalo.material.color.setHSL((hue + 0.28) % 1, 0.76, 0.69);
       }
       shards.forEach(({ mesh, angle, offset, radius }) => {
-        const orbit = angle + elapsed * (motion === "crystal" ? 0.24 : 0.12);
+        const orbit = angle + elapsed * ((motion === "crystal" ? 0.24 : 0.12) + reactionStrength * 0.16);
         mesh.position.x = Math.cos(orbit) * radius;
         mesh.position.y = Math.sin(orbit * 1.3 + offset) * 1.67;
         mesh.rotation.x += delta * (0.22 + offset * 0.01);
@@ -280,9 +292,13 @@ if (canvas && host && sceneElement) {
       const particlePositions = particleGeometry.attributes.position.array;
       for (let index = 0; index < particleCount; index += 1) {
         const y = index * 3 + 1;
+        const x = index * 3;
         particlePositions[y] += drift[index] * delta * (motion === "rain" ? -3.2 : 1);
+        if (reactionStrength > 0.01) particlePositions[x] += Math.sin(elapsed * 1.8 + index) * delta * reactionStrength * 0.22;
         if (particlePositions[y] > 3.7) particlePositions[y] = -3.7;
         if (particlePositions[y] < -3.7) particlePositions[y] = 3.7;
+        if (particlePositions[x] > 6.5) particlePositions[x] = -6.5;
+        if (particlePositions[x] < -6.5) particlePositions[x] = 6.5;
       }
       particleGeometry.attributes.position.needsUpdate = true;
       renderer.render(world, camera);

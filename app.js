@@ -36,7 +36,7 @@
     clues: {}, examined: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
     serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
-    eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null,
+    eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null, casterTimer: null, reactionTimer: null,
     currentPreset: "bruma", lastRoomKey: "", casterBusy: false, roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "", recentCommands: [],
   };
   const users = [
@@ -107,10 +107,25 @@
     const card = $("casterCard");
     card.classList.remove("mood-curious", "mood-worried", "mood-excited", "mood-style", "mood-playful");
     card.classList.add(`mood-${mood}`);
+    card.dataset.mood = mood;
+    const moodLabels = { curious: "INVESTIGA", worried: "EN DUDA", excited: "CELEBRA", style: "CAMBIA EL LOOK", playful: "EN LÍNEA" };
+    $("casterMoodTag").textContent = moodLabels[mood] || moodLabels.playful;
     card.classList.remove("pop", "quiet");
     if (!state.effects) card.classList.add("quiet");
+    card.classList.remove("speaking");
     void card.offsetWidth;
-    card.classList.add("pop");
+    card.classList.add("pop", "speaking");
+    window.clearTimeout(state.casterTimer);
+    state.casterTimer = window.setTimeout(() => card.classList.remove("speaking"), 2400);
+    const scene = $("scene");
+    scene.classList.remove("mimo-reacting");
+    void scene.offsetWidth;
+    scene.classList.add("mimo-reacting", `mimo-${mood}`);
+    window.clearTimeout(state.reactionTimer);
+    state.reactionTimer = window.setTimeout(() => {
+      scene.classList.remove("mimo-reacting", "mimo-curious", "mimo-worried", "mimo-excited", "mimo-style", "mimo-playful");
+    }, 1700);
+    syncThreeScene("reaction", { mood });
     if (addToChat && state.effects) addMessage({ user: "MIMO · CO-CASTER", text: safeLine, caster: true });
   }
 
