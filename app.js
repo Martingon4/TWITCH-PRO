@@ -108,7 +108,7 @@
     card.classList.remove("mood-curious", "mood-worried", "mood-excited", "mood-style", "mood-playful");
     card.classList.add(`mood-${mood}`);
     card.dataset.mood = mood;
-    const moodLabels = { curious: "INVESTIGA", worried: "EN DUDA", excited: "CELEBRA", style: "CAMBIA EL LOOK", playful: "EN LÍNEA" };
+    const moodLabels = { curious: "INVESTIGA", worried: "EN DUDA", excited: "CELEBRA", style: "ESTILO", playful: "EN LÍNEA" };
     $("casterMoodTag").textContent = moodLabels[mood] || moodLabels.playful;
     card.classList.remove("pop", "quiet");
     if (!state.effects) card.classList.add("quiet");

@@ -397,3 +397,24 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   .scene.mimo-reacting .door-glow, .scene.mimo-reacting .room-art { animation: none; }
   .scene.mimo-reacting .room-three-canvas { filter: none; }
 }
+
+/* Keep Mimo's overlay compact and reserve a clear lane for the third clue. */
+.caster-card {
+  width: min(300px, calc(100% - 40px));
+  max-width: min(300px, calc(100% - 40px));
+  min-height: 62px;
+  gap: 9px;
+  padding: 8px 10px;
+}
+.caster-avatar { flex-basis: 36px; width: 36px; height: 36px; }
+.caster-mood { min-height: 14px; padding: 1px 5px; font-size: 6px; letter-spacing: .04em; }
+.caster-copy p { margin-top: 4px; font-size: 11px; line-height: 1.4; }
+.caster-sound { height: 12px; padding-left: 2px; }
+.clue-torch { bottom: 25%; }
+@media (max-width: 760px) {
+  .caster-card { width: min(270px, calc(100% - 20px)); max-width: calc(100% - 20px); left: 10px; bottom: 52px; }
+  .clue-torch { bottom: 25%; }
+}
+@media (max-width: 480px) {
+  .caster-card { width: min(245px, calc(100% - 20px)); max-width: calc(100% - 20px); }
+}
