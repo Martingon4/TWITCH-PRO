@@ -372,7 +372,7 @@
     if (!missingId) return showCaption(`El equipo ya encontró todas las pistas. Código: ${getCode()}.`);
     const clue = state.room.clues[missingId];
     showCaption(clue.hint);
-    addMessage({ user: "Sistema", text: `${user} canjeó una recompensa: Mimo dio una pista sobre ${missingId}.`, system: true, highlight: true });
+    addMessage({ user: "Sistema", text: `${user} canjeó una recompensa: Mimo dio una pista sobre ${clue.name || missingId}.`, system: true, highlight: true });
     showEvent(`${user} canjeó una pista de canal`);
     requestCaster("hint");
   }
