@@ -106,3 +106,21 @@
 .chat-messages{min-height:0;overscroll-behavior:contain}
 .chat-form,.chat-footer{flex:0 0 auto}
 @media(max-width:760px){.chat-panel{height:min(520px,70vh);min-height:420px;max-height:70vh;position:relative;top:auto;order:2}}
+
+/* Give the live chat more room and make previously used commands one-click to reload. */
+.workspace{grid-template-columns:minmax(0,1fr) minmax(370px,400px)}
+.chat-panel{height:calc(100vh - 96px);min-height:min(440px,calc(100vh - 96px));max-height:calc(100vh - 96px)}
+.message-text{font-size:11px;line-height:1.5}
+.chat-banner{font-size:10px;line-height:1.45}
+.input-wrap input{font-size:11px}
+.command-history{display:grid;gap:6px;padding:8px 12px 0}
+.command-history[hidden]{display:none!important}
+.command-history-heading{display:flex;align-items:center;justify-content:space-between;color:#98a0a1;font:8px var(--mono);letter-spacing:.08em}
+.command-history-heading button{padding:2px 4px;border:0;background:transparent;color:#81918c;font:7px var(--mono);cursor:pointer}
+.command-history-heading button:hover{color:#ffd1a0}
+.command-history-list{display:flex;gap:6px;overflow-x:auto;padding:1px 0 5px;scrollbar-width:thin;scrollbar-color:#4e5260 transparent}
+.command-history-item{flex:0 0 auto;max-width:190px;overflow:hidden;padding:6px 9px;border:1px solid #72659b70;border-radius:5px;background:linear-gradient(115deg,#292338,#1a2228);color:#d8cbfa;font:8px var(--mono);text-overflow:ellipsis;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.command-history-item:hover,.command-history-item:focus-visible{transform:translateY(-1px);border-color:#ad92ff;background:#3a2e55;color:#fff;outline:none}
+@media(min-width:1500px){.workspace{grid-template-columns:minmax(0,1fr) 420px}}
+@media(max-width:1050px) and (min-width:761px){.workspace{grid-template-columns:minmax(0,1fr) 340px}}
+@media(max-width:760px){.workspace{grid-template-columns:minmax(0,1fr)}.chat-panel{height:min(540px,70vh);min-height:min(420px,70vh);max-height:70vh}.command-history-item{max-width:170px}}

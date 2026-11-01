@@ -128,7 +128,15 @@
           <div class="chat-banner"><span class="banner-spark">✦</span><span id="chatBannerText">Examinen los objetos, resuelvan sus acertijos y prueben el código en la bóveda.</span></div>
           <div class="chat-messages" id="chatMessages" aria-live="polite" aria-label="Mensajes del chat"></div>
           <div class="chat-event" id="chatEvent"><span>✦</span><span>¡El chat entró a la sala!</span></div>
-          <form class="chat-form" id="chatForm"><label class="sr-only" for="chatInput">Escribe un mensaje o comando de chat</label><div class="input-wrap"><span class="input-prefix">›</span><input id="chatInput" autocomplete="off" maxlength="140" placeholder="Escribe un comando..." /><button type="submit" class="send-button" aria-label="Enviar mensaje">↗</button></div><div class="chat-form-foot"><span>Empieza con <button type="button" class="inline-command" data-command="!examinar reloj">!examinar reloj</button></span><span><span class="sim-dot"></span> <span id="chatModeLabel">SIMULACIÓN</span></span></div></form>
+          <form class="chat-form" id="chatForm">
+            <div class="command-history" id="commandHistory" hidden aria-label="Comandos recientes">
+              <div class="command-history-heading"><span>COMANDOS RECIENTES</span><button type="button" id="clearCommandHistory">BORRAR</button></div>
+              <div class="command-history-list" id="commandHistoryList"></div>
+            </div>
+            <label class="sr-only" for="chatInput">Escribe un mensaje o comando de chat</label>
+            <div class="input-wrap"><span class="input-prefix">›</span><input id="chatInput" autocomplete="off" maxlength="140" placeholder="Escribe un comando..." /><button type="submit" class="send-button" aria-label="Enviar mensaje">↗</button></div>
+            <div class="chat-form-foot"><span>Empieza con <button type="button" class="inline-command" data-command="!examinar reloj">!examinar reloj</button></span><span><span class="sim-dot"></span> <span id="chatModeLabel">SIMULACIÓN</span></span></div>
+          </form>
           <div class="chat-footer"><span>UN JUEGO DE <b>NEXO</b></span><span class="footer-separator">·</span><span>HECHO PARA JUGAR EN COMUNIDAD</span></div>
         </aside>
       </main>

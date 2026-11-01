@@ -11,6 +11,8 @@
   }
   const chatMessages = $("chatMessages");
   const input = $("chatInput");
+  const COMMAND_HISTORY_KEY = "nexo-command-history-v1";
+  const MAX_RECENT_COMMANDS = 8;
   const objectMeta = {
     reloj: { key: "clock", slot: "slotOne", display: "clockStatus", card: "clueClock", label: "HORA" },
     estatua: { key: "statue", slot: "slotTwo", display: "statueStatus", card: "clueStatue", label: "PIEDRA" },
@@ -35,7 +37,7 @@
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
     serverAvailable: false, aiEnabled: false, twitchConfigured: false, twitchStatus: "disconnected",
     eventSource: null, devicePoll: null, toastTimer: null, eventTimer: null, captionTimer: null,
-    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, styleVotes: new Map(), roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "",
+    currentPreset: "bruma", lastRoomKey: "", casterBusy: false, styleVotes: new Map(), roomMode: "template", selectedTemplateId: "", selectedTemplateLabel: "", recentCommands: [],
   };
   const users = [
     { name: "pixelpirata", avatar: "P", color: "coral" },
@@ -135,6 +137,52 @@
     toast.classList.add("show");
     window.clearTimeout(state.toastTimer);
     state.toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2800);
+  }
+
+  function loadRecentCommands() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COMMAND_HISTORY_KEY) || "[]");
+      if (!Array.isArray(saved)) return [];
+      return saved.map((command) => String(command).trim().slice(0, 140)).filter((command) => /^!\S+/.test(command)).slice(0, MAX_RECENT_COMMANDS);
+    } catch {
+      return [];
+    }
+  }
+
+  function renderRecentCommands() {
+    const panel = $("commandHistory");
+    const list = $("commandHistoryList");
+    if (!panel || !list) return;
+    panel.hidden = state.recentCommands.length === 0;
+    list.replaceChildren();
+    state.recentCommands.forEach((command) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "command-history-item";
+      button.textContent = command;
+      button.title = "Cargar comando: " + command;
+      button.setAttribute("aria-label", "Volver a usar " + command);
+      button.addEventListener("click", () => {
+        input.value = command;
+        input.focus();
+        showToast("Comando listo · presiona Enviar para usarlo");
+      });
+      list.append(button);
+    });
+  }
+
+  function rememberRecentCommand(value) {
+    const command = String(value || "").trim().slice(0, 140);
+    if (!/^!\S+/.test(command)) return;
+    state.recentCommands = [command, ...state.recentCommands.filter((recent) => recent !== command)].slice(0, MAX_RECENT_COMMANDS);
+    try { localStorage.setItem(COMMAND_HISTORY_KEY, JSON.stringify(state.recentCommands)); } catch { /* Keep the current session usable if storage is unavailable. */ }
+    renderRecentCommands();
+  }
+
+  function clearRecentCommands() {
+    state.recentCommands = [];
+    try { localStorage.removeItem(COMMAND_HISTORY_KEY); } catch { /* The visible history still clears for this session. */ }
+    renderRecentCommands();
   }
 
   function showEvent(message) {
@@ -772,10 +820,14 @@
 
   $("chatForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    if (input.value.trim()) processCommand(input.value, "tú", "demo");
+    if (input.value.trim()) {
+      rememberRecentCommand(input.value);
+      processCommand(input.value, "tú", "demo");
+    }
     input.value = "";
     input.focus();
   });
+  $("clearCommandHistory").addEventListener("click", clearRecentCommands);
   $("roomForm").addEventListener("submit", (event) => {
     event.preventDefault();
     createRoom($("themeInput").value);
@@ -842,6 +894,8 @@
   roomHeading.textContent = state.room.title;
   $("roomLabelText").textContent = state.room.title.toLocaleUpperCase("es");
   $("scene").classList.add("preset-bruma");
+  state.recentCommands = loadRecentCommands();
+  renderRecentCommands();
   document.body.classList.toggle("overlay-mode", overlayMode);
   connectEvents();
   checkServer();
