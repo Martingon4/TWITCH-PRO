@@ -235,6 +235,16 @@ function roomFallbackNote(error, provider = "openai") {
   if (status === 429) return `${providerName} respondió con error 429. Puede ser un límite temporal o de uso; revisa Usage y Billing de esa API.`;
   if (/timeout|timed out|abort/.test(message)) return `La solicitud a ${providerName} tardó demasiado. Inténtalo de nuevo cuando el servicio esté despierto.`;
   if (status >= 500) return `${providerName} no está respondiendo ahora. La sala se creó con la plantilla de respaldo.`;
+  if (provider === "gemini" && status >= 400) {
+    const detail = String(error?.message || "").replace(/AIza[\w-]{20,}/g, "[clave oculta]").replace(/[<>\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 220);
+    return `Gemini rechazó la solicitud (HTTP ${status})${detail ? `: ${detail}` : ". Revisa el modelo y el formato solicitado."}`;
+  }
+  if (provider === "gemini" && error instanceof SyntaxError) return "Gemini respondió, pero el contenido no se pudo leer como JSON válido. La sala usa la plantilla de respaldo.";
+  if (provider === "gemini" && /La sala generada|Los objetos generados|La respuesta de un acertijo/.test(error?.message || "")) {
+    return `Gemini creó una sala que no pasó la validación: ${String(error.message).replace(/[<>\u0000-\u001f]/g, " ").slice(0, 180)} Se cargó una plantilla.`;
+  }
+  if (provider === "gemini" && /no devolvió una sala/.test(error?.message || "")) return "Gemini no devolvió el contenido JSON de la sala; se cargó una plantilla. Revisa la configuración del modelo en Render.";
+  if (provider === "gemini" && status === 0 && error?.name === "TypeError") return "No se pudo conectar con la API de Gemini. Comprueba el servicio y vuelve a intentar.";
   return `No se pudo confirmar la respuesta de ${providerName}. Revisa el registro del servicio en Render; esta sala usa la plantilla de respaldo.`;
 }
 
@@ -324,10 +334,14 @@ async function generateRoom(theme, mode = "template", templateId = "", provider 
     const text = selectedProvider === "gemini"
       ? (response.candidates?.[0]?.content?.parts || []).map((part) => part.text || "").join("\n")
       : outputText(response);
-    if (!text) throw new Error("El generador no devolvió una sala.");
+    if (!text) {
+      const finishReason = selectedProvider === "gemini" ? response.candidates?.[0]?.finishReason : "";
+      throw new Error(finishReason ? `Gemini no devolvió contenido utilizable (${finishReason}).` : "El generador no devolvió una sala.");
+    }
     const parsed = JSON.parse(text);
     return { room: safeRoomFromModel(parsed, prompt, selectedProvider), note: null };
   } catch (error) {
+    console.error(`[room-generation] provider=${selectedProvider} status=${Number(error?.status || 0)} name=${error?.name || "Error"} message=${String(error?.message || "unknown").replace(/[\r\n\u0000-\u001f]/g, " ").slice(0, 300)}`);
     return { room: buildTemplateRoom(prompt, templateId), note: `${roomFallbackNote(error, selectedProvider)} Se cargó la plantilla «${buildTemplateRoom(prompt, templateId).templateLabel}»; esta sala se puede jugar sin API.` };
   }
 }
