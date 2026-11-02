@@ -12,7 +12,7 @@ Turn a Twitch stream into a live, chat-driven escape room where viewers investig
 
 ## Project description
 
-Nexo gives Twitch streamers a cooperative escape-room format built around their live community. A streamer chooses a scenario and places the game in an OBS browser overlay. Viewers use Twitch chat commands to inspect objects, solve three clues against a configurable 3–5 minute countdown, collect a vault code, request hints, and trigger safe visual styles. The timer warns the audience as time runs low and turns the scene into a clear failure state if the room is not solved. Mimo, a visual Co-Caster, reacts to chat and game events.
+Nexo gives Twitch streamers a cooperative escape-room format built around their live community. A streamer chooses a scenario and places the game in an OBS browser overlay. Viewers use Twitch chat commands to inspect objects, solve three clues against a configurable 3–5 minute countdown that begins when the first clue is examined, collect a vault code, request hints, and trigger safe visual styles. The timer warns the audience as time runs low and turns the scene into a clear failure state if the room is not solved. Mimo, a visual Co-Caster, reacts to chat and game events.
 
 The project connects to Twitch through device authorization, EventSub chat and channel-point redemption events, and a per-channel overlay. PostgreSQL keeps each channel's room, progress, recent chat, and encrypted Twitch tokens separate. Streamers can use free templates or optionally generate an original room with Gemini or OpenAI. The public demo stays on local templates and requires no login, Twitch authorization, or AI API key.
 

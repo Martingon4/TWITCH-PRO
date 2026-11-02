@@ -19,7 +19,7 @@ The public demo runs a template-based simulation in the visitor's browser. It do
 - Twitch chat and channel-point redemption events through EventSub WebSocket.
 - Viewers can investigate clues, solve puzzles, request hints and reactions, and activate safe visual styles.
 - Three.js environments and a private OBS overlay link for the connected Twitch channel.
-- Timed rounds: choose 3, 4, or 5 minutes (4 by default), with one-minute, 30-second, and 10-second warnings and a visible failure state when time runs out.
+- Timed rounds: choose 3, 4, or 5 minutes (4 by default). The countdown starts when chat examines its first object with `!examinar [object]`, shows one-minute, 30-second, and 10-second warnings, and displays a failure state if time runs out.
 - Per-channel room, progress, chat, and encrypted Twitch tokens stored in PostgreSQL.
 
 The app never executes HTML, CSS, or JavaScript supplied by chat. Chat context sent to an AI provider may contain personal information; do not send private data. Nexo reads chat and channel-point redemptions. It does not create, modify, or fulfill Twitch rewards.

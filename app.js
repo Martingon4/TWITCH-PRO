@@ -301,7 +301,7 @@ card.dataset.mood = mood;
     }
     if (!state.timerEndsAt) {
       timer.textContent = `⏱ ${formatCountdown(selectedRoomDuration())}`;
-      timer.title = "El reloj comienza al iniciar una sala";
+      timer.title = "El reloj comienza con el primer comando !examinar [objeto]";
       return;
     }
     const secondsLeft = Math.max(0, Math.ceil((state.timerEndsAt - Date.now()) / 1000));
@@ -430,6 +430,7 @@ card.dataset.mood = mood;
       showCaption(`Cifra descubierta: ${clue.digit}.`);
       return;
     }
+    if (!state.timerEndsAt && !state.timerFailed && !state.opened) startRoundTimer();
     state.examined[id] = true;
     $(meta.display).textContent = "ACERTIJO ACTIVO";
     $(meta.card).classList.add("examined");
@@ -761,7 +762,7 @@ card.dataset.mood = mood;
     showEvent(["openai", "gemini"].includes(room.source) ? `Sala generada con ${room.source === "gemini" ? "Gemini" : "OpenAI"} · mira el dossier` : `Plantilla jugable · ${room.templateLabel || "aventura"}`);
   }
 
-  function resetGame(showMessage = true, startTimer = true) {
+  function resetGame(showMessage = true, startTimer = false) {
     state.clues = {};
     state.examined = {};
     state.energy = 12;
@@ -774,7 +775,7 @@ card.dataset.mood = mood;
     syncThreeScene("reset");
     $("successOverlay").classList.remove("visible");
     setEndingMode("success");
-    $("sceneHint").textContent = "Pista colectiva: examina los objetos para reunir el código.";
+    $("sceneHint").textContent = "El reloj empieza al examinar el primer objeto: !examinar [objeto].";
     $("clueCount").textContent = "0";
     $("energyValue").textContent = "12";
     $("energyFill").style.width = "12%";
@@ -797,7 +798,7 @@ card.dataset.mood = mood;
       setCaster("Nueva sala, misma oportunidad para que el chat salve al streamer.", false);
       showToast("Ronda reiniciada · vuelvan a investigar");
     }
-    if (startTimer) persistGameState();
+    persistGameState();
   }
 
   function restoreGameState(snapshot) {
@@ -816,7 +817,7 @@ card.dataset.mood = mood;
     const savedDeadline = Number(snapshot.timerEndsAt);
     state.timerEndsAt = Number.isFinite(savedDeadline) && savedDeadline > 0
       ? savedDeadline
-      : (state.opened || state.timerFailed ? 0 : Date.now() + selectedRoomDuration() * 1000);
+      : 0;
     const restoredSeconds = state.timerEndsAt ? Math.max(0, Math.ceil((state.timerEndsAt - Date.now()) / 1000)) : 0;
     state.timerWarnings = new Set([60, 30, 10].filter((threshold) => restoredSeconds < threshold));
     if (snapshot.effects !== undefined) state.effects = snapshot.effects !== false;

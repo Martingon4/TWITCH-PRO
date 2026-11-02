@@ -39,7 +39,7 @@ No publiques enlaces de overlay, códigos de activación, tokens ni claves de AP
 1. Abre https://twitch-pro.onrender.com/ y pulsa **ENTRAR COMO STREAMER CON TWITCH**. Abre Twitch Activate y autoriza los permisos de lectura solicitados.
 2. Espera a que el panel muestre el canal conectado. La sesión queda ligada a esa cuenta de Twitch.
 3. Elige un escenario o escribe una situación y pulsa **Crear sala**. El modo **Plantilla · gratis** no consume créditos. **IA · con créditos** usa el proveedor seleccionado y puede generar cargos/cuota.
-4. Antes de iniciarla, selecciona el límite de 3, 4 o 5 minutos (4 por defecto). El contador y los avisos aparecen visualmente en la escena y en OBS al minuto, a los 30 y a los 10 segundos; Nexo no publica mensajes de aviso en el chat de Twitch. Si llega a cero, la ronda falla con un efecto rojo y el botón para reintentar.
+4. Selecciona el límite de 3, 4 o 5 minutos (4 por defecto). Crear la sala deja el reloj preparado, pero detenido: empieza cuando alguien usa `!examinar [objeto]` y revela el primer acertijo. El contador y los avisos aparecen visualmente en la escena y en OBS al minuto, a los 30 y a los 10 segundos; Nexo no publica mensajes de aviso en el chat de Twitch. Si llega a cero, la ronda falla con un efecto rojo y el botón para reintentar.
 5. En OBS, añade una **Fuente de navegador** y pega la URL privada que copia el botón de overlay del panel conectado. No uses `localhost` en OBS si Render aloja la app.
 6. Desde la segunda cuenta de Twitch, prueba los comandos que aparecen en el panel, por ejemplo `!examinar [objeto]` y `!resolver [objeto] [respuesta]`.
 7. Completa las tres pistas y escribe el código indicado por la sala para abrir la bóveda. Prueba también `!estilo ...`, `!reacciona` y `!tema ...`.

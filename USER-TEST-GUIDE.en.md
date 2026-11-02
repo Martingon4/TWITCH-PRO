@@ -40,7 +40,7 @@ Do not publish the private OBS overlay URL, device codes, Twitch tokens, or API 
 2. Open Twitch Activate and authorize the requested read scopes for the channel.
 3. Wait until the dashboard shows the channel as connected. The session is tied to this Twitch account. Viewers who only want to try the game can choose **PROBAR COMO ESPECTADOR** instead; that path opens the browser simulation.
 4. Choose a scenario or describe a situation and create a room. **Free template** mode does not call an AI API. **AI · with credits** sends a request to the selected provider and may use its quota.
-5. Before starting, choose a 3-, 4-, or 5-minute limit (4 minutes by default). The countdown and visual warnings appear in the scene and OBS at one minute, 30 seconds, and 10 seconds. Nexo does not post warning messages to Twitch chat. If time expires, the round fails and the streamer can restart it.
+5. Choose a 3-, 4-, or 5-minute limit (4 minutes by default). Creating a room prepares the timer but does not start it; it begins when someone sends `!examinar [object]` and reveals the first clue. The countdown and visual warnings appear in the scene and OBS at one minute, 30 seconds, and 10 seconds. Nexo does not post warning messages to Twitch chat. If time expires, the round fails and the streamer can restart it.
 6. In OBS, add a **Browser Source** and paste the private overlay URL copied from the connected dashboard. Do not use localhost when the app is hosted on Render.
 7. From the second Twitch account, send commands shown in the room, such as !examinar [object] and !resolver [object] [answer].
 8. Solve all three clues, then enter the room's displayed code with !codigo [code]. Try !estilo ..., !reacciona, and !tema ....
