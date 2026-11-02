@@ -21,7 +21,7 @@
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           <span>NEXO<span class="brand-dot">.</span></span>
         </a>
-        <div class="topbar-center"><span class="live-pulse"></span><span>PANEL DEL STREAMER</span><span class="topbar-divider"></span><span class="mono">SALA 001</span></div>
+        <div class="topbar-center"><span class="live-pulse"></span><span id="topbarModeLabel">PANEL DEL STREAMER</span></div>
 <div class="topbar-right"><span class="connection-state" id="connectionState" role="status" aria-live="polite"><span class="connection-dot" id="connectionDot"></span><span id="connectionLabel">MODO DEMO</span></span><button class="connect-button" id="connectButton" type="button" aria-label="Conectar este panel con Twitch">CONECTAR TWITCH <span aria-hidden="true">↗</span></button><form class="logout-form" id="logoutForm" action="/logout" method="post"><button class="mode-switch-button" type="submit">CAMBIAR PERFIL</button></form><button class="icon-button" id="overlayLinkButton" type="button" title="Copiar enlace seguro del overlay de este canal" aria-label="Copiar enlace del overlay" hidden>▣</button><button class="icon-button" id="resetButton" type="button" title="Reiniciar sala" aria-label="Reiniciar sala">↻</button></div>
       </header>
 
@@ -33,15 +33,15 @@
           </div>
 
           <nav class="workflow-nav" aria-label="Flujo para iniciar una partida">
-            <a href="#scenarioPicker"><span>01</span><span>Elige el mundo</span></a>
-            <a href="#roomForm"><span>02</span><span>Prepara la sala</span></a>
-            <a href="#chatForm"><span>03</span><span>Juega con el chat</span></a>
+            <a href="#scenarioPicker"><span>01</span><span>Elige una historia</span></a>
+            <a href="#roomForm"><span>02</span><span>Crea la sala</span></a>
+            <a href="#chatForm"><span>03</span><span>Prueba un comando</span></a>
           </nav>
 
           <section class="creation-bar panel" aria-label="Crear una sala">
-            <div class="creation-copy"><span class="creation-icon" aria-hidden="true">✳</span><div><span class="section-kicker">PREPARA LA MISIÓN</span><h2>¿Qué aventura jugará tu chat?</h2><p>Elige un mundo listo para jugar o crea una situación propia con IA.</p></div></div>
+            <div class="creation-copy"><span class="creation-icon" aria-hidden="true">✳</span><div><span class="section-kicker">EMPIEZA AQUÍ</span><h2>Elige una historia</h2><p>Selecciona una tarjeta y pulsa «Crear sala». Las plantillas son gratis; no necesitas configurar IA.</p></div></div>
             <div class="scenario-picker" id="scenarioPicker" role="group" aria-label="Paso 1: elige el escenario de la sala">
-              <div class="scenario-picker-heading"><span><b>01</b> ELIGE EL MUNDO DE LA AVENTURA</span><small>Selecciona una tarjeta. La sala aparecerá en el dossier y en la vista del stream.</small></div>
+              <div class="scenario-picker-heading"><span><b>1</b> ELIGE UNA HISTORIA</span><small>Haz clic en una tarjeta. Después pulsa «Crear sala».</small></div>
               <div class="scenario-grid">
                 <button class="scenario-card" type="button" data-template="space" data-label="Nave espacial" aria-pressed="false"><span class="scenario-icon">✦</span><span class="scenario-card-copy"><strong>Nave espacial</strong><small>Reactiva los motores y recupera el rumbo</small></span><span class="scenario-check">＋</span></button>
                 <button class="scenario-card" type="button" data-template="mansion" data-label="Mansión misteriosa" aria-pressed="false"><span class="scenario-icon">♜</span><span class="scenario-card-copy"><strong>Mansión misteriosa</strong><small>Encuentra las llaves antes de que cambie</small></span><span class="scenario-check">＋</span></button>
@@ -55,13 +55,13 @@
               </div>
             </div>
             <div class="creation-options" id="roomFormStep">
-              <div class="creation-options-heading"><span class="step-number">02</span><div><strong>Prepara la sala</strong><small>Las plantillas son gratis. La IA usa créditos de API.</small></div></div>
+              <div class="creation-options-heading"><span class="step-number">2</span><div><strong>Elige cómo crearla</strong><small>Recomendado: «Plantilla gratis». La IA es opcional y puede consumir créditos.</small></div></div>
               <div class="creation-options-controls">
                 <div class="room-mode" role="group" aria-label="Modo de creación"><button class="mode-option active" id="templateModeButton" type="button" aria-pressed="true">PLANTILLA · GRATIS</button><button class="mode-option" id="aiModeButton" type="button" aria-pressed="false">IA · CON CRÉDITOS</button></div>
                 <div class="ai-provider-options" id="aiProviderOptions" role="group" aria-label="Proveedor para generar escenarios" hidden><span>GENERAR CON</span><button class="provider-option active" id="geminiProviderButton" type="button" aria-pressed="true">GEMINI</button><button class="provider-option" id="openaiProviderButton" type="button" aria-pressed="false">OPENAI</button></div>
                 <form class="creation-form" id="roomForm"><label class="sr-only" for="themeInput">Situación propia para generar con IA</label><input id="themeInput" maxlength="120" aria-describedby="creationHint" placeholder="Ej.: una nave perdió energía y el chat debe repararla..."/><button id="generateButton" type="submit">CREAR SALA <span aria-hidden="true">↗</span></button></form>
               </div>
-              <p class="creation-hint" id="creationHint">Con una tarjeta seleccionada, pulsa «Crear sala». Para inventar otra situación, elige IA y descríbela aquí.</p>
+              <p class="creation-hint" id="creationHint">Para empezar, deja «Plantilla gratis», elige una tarjeta y pulsa «Crear sala».</p>
             </div>
             <span class="ai-status" id="aiStatus" role="status" aria-live="polite"><span class="ai-indicator"></span> PLANTILLAS GRATIS LISTAS · IA OPCIONAL</span>
           </section>
@@ -80,7 +80,7 @@
                 <div class="room-object"><strong>ESTATUA</strong><span>Calculen cuántos sellos quedan en la caja.</span></div>
                 <div class="room-object"><strong>ANTORCHA</strong><span>Resuelvan las marcas para encontrar la última cifra.</span></div>
               </div>
-              <div class="room-first-step" id="roomFirstStep"><span>Pulsa para preparar el primer comando</span><button class="first-step-button" id="roomFirstCommand" type="button">!examinar reloj <span aria-hidden="true">↗</span></button></div>
+              <div class="room-first-step" id="roomFirstStep"><span>Empieza: pulsa el comando y luego «Enviar» en el chat de prueba.</span><button class="first-step-button" id="roomFirstCommand" type="button">!examinar reloj <span aria-hidden="true">↗</span></button></div>
             </div>
             <p class="room-generation-note" id="roomGenerationNote" hidden></p>
           </section>
@@ -130,7 +130,7 @@
             <section class="howto-card panel">
               <div class="panel-heading"><div><span class="section-kicker">CÓMO SE JUEGA</span><h2>Todo empieza en el chat</h2></div><span class="howto-icon">⌘</span></div>
               <div class="command-list"><div class="command-row"><span class="command-number">01</span><code>!examinar objeto</code><span>Muestra el acertijo del objeto</span></div><div class="command-row"><span class="command-number">02</span><code>!resolver objeto respuesta</code><span>Comprueba una respuesta</span></div><div class="command-row"><span class="command-number">03</span><code>!pista</code><span>Da una pista gradual al equipo</span></div><div class="command-row"><span class="command-number">04</span><code>!codigo cifra</code><span>Abre la bóveda si es correcto</span></div><div class="command-row"><span class="command-number">05</span><code>!estilo aurora</code><span>Mimo rediseña luces y animación</span></div><div class="command-row"><span class="command-number">06</span><code>!reacciona</code><span>Mimo comenta el momento del chat</span></div></div>
-              <div class="howto-foot"><span class="tiny-shield">◈</span> El streamer controla la experiencia. El chat crea el momento.</div>
+              <div class="howto-foot"><span class="tiny-shield">◈</span> Esta caja sirve para probar. En directo, los espectadores escriben los comandos en el chat de tu canal de Twitch.</div>
             </section>
           </div>
         </section>
@@ -141,14 +141,14 @@
           <div class="chat-banner"><span class="banner-spark">✦</span><span id="chatBannerText">Examinen los objetos, resuelvan sus acertijos y prueben el código en la bóveda.</span></div>
           <div class="chat-messages" id="chatMessages" aria-live="polite" aria-label="Mensajes del chat"></div>
           <div class="chat-event" id="chatEvent"><span>✦</span><span>¡El chat entró a la sala!</span></div>
-          <form class="chat-form" id="chatForm" aria-label="Escribir en el chat de prueba">
+          <form class="chat-form" id="chatForm" aria-label="Probar un comando en la simulación local">
             <div class="command-history" id="commandHistory" hidden aria-label="Comandos recientes">
               <div class="command-history-heading"><span>COMANDOS RECIENTES</span><button type="button" id="clearCommandHistory">BORRAR</button></div>
               <div class="command-history-list" id="commandHistoryList"></div>
             </div>
-            <label class="sr-only" for="chatInput">Escribe un mensaje o comando de chat</label>
-            <div class="input-wrap"><span class="input-prefix">›</span><input id="chatInput" autocomplete="off" maxlength="140" placeholder="Escribe un comando..." /><button type="submit" class="send-button" aria-label="Enviar mensaje">↗</button></div>
-            <div class="chat-form-foot"><span>Empieza con <button type="button" class="inline-command" data-command="!examinar reloj">!examinar reloj</button></span><span><span class="sim-dot"></span> <span id="chatModeLabel">SIMULACIÓN</span></span></div>
+            <label class="sr-only" for="chatInput">Escribe un comando para probarlo aquí; no se envía a Twitch</label>
+            <div class="input-wrap"><span class="input-prefix">›</span><input id="chatInput" autocomplete="off" maxlength="140" placeholder="Prueba aquí: !examinar objeto" /><button type="submit" class="send-button" aria-label="Probar comando">↗</button></div>
+            <div class="chat-form-foot"><span>Prueba sugerida: <button type="button" class="inline-command" data-command="!examinar reloj">!examinar reloj</button></span><span><span class="sim-dot"></span> <span id="chatModeLabel">PRUEBA LOCAL</span></span></div>
           </form>
           <div class="chat-footer"><span>UN JUEGO DE <b>NEXO</b></span><span class="footer-separator">·</span><span>HECHO PARA JUGAR EN COMUNIDAD</span></div>
         </aside>

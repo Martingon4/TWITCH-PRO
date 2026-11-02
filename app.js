@@ -801,8 +801,8 @@ card.dataset.mood = mood;
       $("connectionLabel").textContent = `TWITCH · ${payload.twitch.login || "CONECTADO"}`;
       $("connectButton").textContent = "DESCONECTAR";
       $("streamState").textContent = payload.twitch.rewardsAvailable ? "CHAT + PUNTOS" : "CHAT DE TWITCH";
-      $("chatModeLabel").textContent = payload.twitch.rewardsAvailable ? "TWITCH · CHAT + PUNTOS" : "TWITCH EN VIVO";
-      $("chatInput").placeholder = "Simula un comando local...";
+      $("chatModeLabel").textContent = "PRUEBA LOCAL";
+      $("chatInput").placeholder = "Prueba aquí: !examinar objeto";
       $("chatBannerText").setAttribute("aria-live", "polite");
       if (payload.twitch.rewardsError) showToast("Chat conectado; Twitch no habilitó los canjes de puntos.");
     } else {
@@ -813,8 +813,8 @@ card.dataset.mood = mood;
       $("connectButton").innerHTML = "CONECTAR TWITCH <span>↗</span>";
       if (["error", "reauthorization_required"].includes(status) && payload.detail) showToast(payload.detail);
       $("streamState").textContent = "MODO DEMO";
-      $("chatModeLabel").textContent = "SIMULACIÓN";
-      $("chatInput").placeholder = "Escribe un comando...";
+      $("chatModeLabel").textContent = "PRUEBA LOCAL";
+      $("chatInput").placeholder = "Prueba aquí: !examinar objeto";
     }
     const ai = $("aiStatus");
     ai.classList.toggle("ready", true);
@@ -1025,8 +1025,7 @@ card.dataset.mood = mood;
       if (check) check.textContent = choice === button ? "✓" : "+";
     });
     if (!currentInput || currentInput === previousLabel) $("themeInput").value = button.dataset.label;
-    $("themeInput").placeholder = `Situación para «${button.dataset.label}» (puedes editarla)...`;
-    $("themeInput").focus();
+    $("themeInput").placeholder = `Idea opcional para «${button.dataset.label}»...`;
   }));
   $("roomFirstCommand").addEventListener("click", () => {
     input.value = $("roomFirstCommand").dataset.command || "!examinar reloj";
@@ -1076,15 +1075,16 @@ card.dataset.mood = mood;
   if (publicDemoMode) {
     const logoutForm = $("logoutForm");
     if (logoutForm) logoutForm.hidden = true;
+    $("topbarModeLabel").textContent = "DEMO PARA ESPECTADORES";
     document.body.classList.add("public-demo-mode");
     $("connectButton").hidden = true;
     $("overlayLinkButton").hidden = true;
     $("aiModeButton").hidden = true;
     $("aiProviderOptions").hidden = true;
     $("connectionLabel").textContent = "DEMO PÚBLICA";
-    $("chatModeLabel").textContent = "SIMULACIÓN LOCAL";
+    $("chatModeLabel").textContent = "PRUEBA LOCAL";
     $("aiStatus").innerHTML = '<span class="ai-indicator"></span>DEMO GRATUITA · SIN TWITCH NI API';
-    $("creationHint").textContent = "Elige una plantilla, crea una sala y prueba los comandos simulados. La demo no inicia sesión ni guarda datos.";
+    $("creationHint").textContent = "Elige una tarjeta y pulsa «Crear sala». Después prueba un comando en la caja de la derecha. La demo no inicia sesión ni guarda datos.";
   }
   connectEvents();
   checkServer().then((status) => { if (!status?.twitch?.id) seedChat(); });
