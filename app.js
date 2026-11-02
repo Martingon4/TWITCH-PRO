@@ -1074,6 +1074,8 @@ card.dataset.mood = mood;
   renderRecentCommands();
   document.body.classList.toggle("overlay-mode", overlayMode);
   if (publicDemoMode) {
+    const logoutForm = $("logoutForm");
+    if (logoutForm) logoutForm.hidden = true;
     document.body.classList.add("public-demo-mode");
     $("connectButton").hidden = true;
     $("overlayLinkButton").hidden = true;

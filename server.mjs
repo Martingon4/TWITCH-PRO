@@ -594,10 +594,6 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true });
     if (authEnabled && url.pathname === "/login" && req.method === "GET") {
-      if (hasDashboardSession(req)) {
-        res.writeHead(303, { location: "/", "cache-control": "no-store" });
-        return res.end();
-      }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       return res.end(loginPage());
     }
