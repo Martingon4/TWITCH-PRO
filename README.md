@@ -16,6 +16,7 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 - Chat de Twitch mediante EventSub WebSocket y autorización Device Code.
 - Canjes de puntos de canal conectados a acciones de Nexo mediante EventSub; las acciones aceptadas se limitan a una pista, un estilo, una propuesta de tema y una reacción de Mimo.
 - Interacción comunitaria: la participación carga energía, `!pista` desbloquea ayuda y el chat activa paletas y animaciones de Three.js escribiendo una petición para Mimo.
+- Presión de tiempo: cada ronda dura 3, 4 o 5 minutos (4 por defecto), con avisos al minuto, a los 30 y 10 segundos, más una pantalla de derrota y efecto rojo si se agota el tiempo.
 - Escena 3D con Three.js, efectos ambientales y overlay para OBS en `http://localhost:4173/?overlay=1`.
 
 En el modo de IA, el modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat.
@@ -119,6 +120,8 @@ Para proteger la escena, los títulos de otras recompensas no ejecutan comandos.
 2. Elige uno de los escenarios o escribe una situación propia. El texto libre se incorpora a la historia y el sistema elige una plantilla compatible; sus acertijos están listos y no requieren IA.
 3. Pulsa **Crear sala** y revisa el dossier para ver el objetivo, los tres objetos y el primer comando.
 4. En el chat, usa `!examinar [objeto]`, después `!resolver [objeto] [respuesta]` para cada pista y finalmente `!codigo [código]`.
+
+Elige un límite de 3, 4 o 5 minutos antes de iniciar la sala. El contador comienza al crear o reiniciar la ronda; si llega a cero antes de abrir la bóveda, la partida queda fallida y el streamer puede reiniciarla.
 
 La opción **IA · con créditos** permite seleccionar Gemini u OpenAI. La pantalla indica si falta la clave seleccionada y, si el proveedor rechaza la solicitud, Nexo entrega una plantilla y explica el motivo.
 

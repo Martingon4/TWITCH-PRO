@@ -388,6 +388,7 @@ function fallbackCaster(trigger) {
     room: ["Nueva sala, nuevo misterio y el chat ya viene con teorías de sobra.", "Una habitación recién salida del generador. Mimo recomienda mirar antes de tocar."],
     clue: ["¡Pista encontrada! El chat está haciendo el trabajo de detective que nadie le pidió al streamer.", "Buen ojo. A este ritmo, la sala se queda sin secretos antes que el canal sin teorías."],
     wrong: ["Esa respuesta no coincide con el acertijo. La puerta juzga en silencio; yo no tanto.", "Casi. El acertijo sigue activo y Mimo finge que lo esperaba."],
+    timeout: ["Se acabó el tiempo y la bóveda sigue cerrada. El chat estuvo cerca; la puerta no tiene corazón.", "La sala ganó esta ronda. Mimo exige revancha inmediata."],
     progress: ["¡Efecto desbloqueado! El chat acaba de mejorar la iluminación; el presupuesto era imaginario.", "La energía sube. ¿Quién diría que escribir en mayúsculas servía para algo?"],
     open: ["La bóveda cedió. Voy a fingir que lo tenía calculado.", "¡El chat lo hizo! El streamer puede respirar hasta que aparezca la siguiente puerta."],
     hint: ["Pista para el equipo: miren los detalles que parecen demasiado obvios.", "La estatua lleva rato esperando que alguien le preste atención."],
@@ -710,6 +711,8 @@ const server = createServer(async (req, res) => {
         examined: body.examined && typeof body.examined === "object" ? body.examined : {},
         energy: Math.max(0, Math.min(100, Number(body.energy) || 0)),
         opened: Boolean(body.opened), effects: body.effects !== false,
+        timerEndsAt: Number.isFinite(Number(body.timerEndsAt)) ? Math.max(0, Number(body.timerEndsAt)) : 0,
+        timerFailed: Boolean(body.timerFailed),
       };
       await saveGameState(streamer.id, gameState);
       await broadcast(streamer.id, "game-state", gameState);

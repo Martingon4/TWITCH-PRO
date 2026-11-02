@@ -130,6 +130,28 @@
 .theme-festival .door-ring{border-color:#ffd3f4;box-shadow:0 0 0 4px #321e3d,0 0 0 6px #ff8ee26b,inset 0 0 14px #ffb2e955}
 .theme-generic .vault-door{border-radius:18px;border-color:#8b9fba;background:linear-gradient(135deg,#536b83,#33465e 25%,#1e2d43 58%,#405a72 80%,#182436)}
 
+/* Timed escape-room round: clear warnings and an unmistakable failure state. */
+.timer-setting{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:7px;color:#b9b1ca;font:8px var(--mono);letter-spacing:.06em}
+.timer-setting select{min-height:32px;padding:0 9px;border:1px solid #746b8554;border-radius:7px;background:#191b24;color:#f0eaff;font:10px var(--sans)}
+.timer-setting small{color:#858997;font:9px var(--sans);letter-spacing:0}
+.scene-timer{padding:4px 7px;border:1px solid transparent;border-radius:4px;transition:color .2s,border-color .2s,background .2s}
+.scene.timer-warning .scene-timer{color:#ffd27e;border-color:#f0bd6266;background:#473619aa}
+.scene.timer-critical .scene-timer{color:#ffaaa4;border-color:#f17e7290;background:#451e24cc;text-shadow:0 0 12px #ff584c;animation:timerPulse .85s ease-in-out infinite alternate}
+.scene.failed .scene-timer{color:#ffaaa4;border-color:#f17e7290;background:#451e24cc;text-shadow:0 0 12px #ff584c}
+.scene.failed:after{background:radial-gradient(ellipse at 50% 50%,#ff34352e,transparent 66%),linear-gradient(110deg,#6e111322,#e22c2926);mix-blend-mode:screen;animation:failureFlash .8s ease-in-out 4}
+.scene.failed .door-glow{background:radial-gradient(ellipse,#ff34357a,#bb172e45 42%,transparent 72%);animation:failureAlarm .75s ease-in-out 5}
+.scene.failed .vault-door{border-color:#ed5e65!important;filter:saturate(.5) brightness(.72);box-shadow:0 0 0 9px #240f17dd,0 0 0 11px #ff555b55,inset 0 0 38px #701b26,0 19px 36px #0009}
+.scene.failed .door-lock{color:#ff9da0;border-color:#e65d6288;background:#35171dcc}
+.scene.failed .scene-bottom{background:linear-gradient(transparent,#300d13dd);color:#ffb6ae}
+.success-overlay.failed{background:radial-gradient(ellipse at center,#641d24ed,#150e16f2 78%)}
+.success-overlay.failed .success-icon{color:#ff9695;border-color:#f17e72a8;background:#492025;box-shadow:0 0 45px #f17e7255}
+.success-overlay.failed .eyebrow{color:#ffaaa4}
+.success-overlay.failed .next-room-button{background:#f17e72;color:#2a1113}
+@keyframes timerPulse{from{box-shadow:0 0 0 #f17e7200}to{box-shadow:0 0 15px #f17e7266}}
+@keyframes failureFlash{0%,100%{opacity:.14}45%{opacity:.85}}
+@keyframes failureAlarm{0%,100%{opacity:.55;filter:blur(22px)}50%{opacity:1;filter:blur(32px)}}
+@media(prefers-reduced-motion:reduce){.scene.failed:after,.scene.failed .door-glow,.scene.timer-critical .scene-timer{animation:none}}
+
 /* Keep the chat composer in view while the message feed scrolls inside the panel. */
 .chat-panel{height:calc(100vh - 112px);min-height:420px;max-height:calc(100vh - 112px);position:sticky;top:12px}
 .chat-messages{min-height:0;overscroll-behavior:contain}

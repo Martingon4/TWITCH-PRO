@@ -1,5 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
+  const DEFAULT_ROOM_DURATION_SECONDS = 240;
+  const ROOM_DURATION_OPTIONS = [180, 240, 300];
   const syncThreeScene = (event, detail = {}) => window.dispatchEvent(new CustomEvent(`nexo:${event}`, { detail }));
   const pageParams = new URLSearchParams(location.search);
   const overlayMode = pageParams.get("overlay") === "1";
@@ -39,6 +41,7 @@
   };
   const state = {
     clues: {}, examined: {}, energy: 12, opened: false, effects: true, messages: 0, room: fallbackRoom,
+    roomDurationSeconds: DEFAULT_ROOM_DURATION_SECONDS, timerEndsAt: 0, timerFailed: false, timerWarnings: new Set(), timerInterval: null,
     participants: new Set(), contributionTimes: new Map(), chatContext: [],
 serverAvailable: false, aiEnabled: false, aiProviders: { gemini: false, openai: false }, aiProvider: "gemini", twitchConfigured: false, twitchStatus: "disconnected", streamerId: "", canControl: true,
     eventSource: null, devicePoll: null, deviceFlowId: "", restoredChat: false, persistTimer: null, toastTimer: null, eventTimer: null, captionTimer: null, casterTimer: null, reactionTimer: null,
@@ -54,6 +57,7 @@ serverAvailable: false, aiEnabled: false, aiProviders: { gemini: false, openai: 
   const casterLines = {
     inspect: ["Una pista más. El chat está haciendo el trabajo de detective que nadie le pidió al streamer.", "¡Buen ojo! A este ritmo, la sala se queda sin secretos antes que el canal sin teorías."],
     wrong: ["Esa respuesta no encaja con el acertijo. La puerta juzga en silencio; yo no tanto.", "Casi… el acertijo sigue sin resolverse, pero la bóveda no se va a ningún lado."],
+    timeout: ["Se acabó el tiempo y la bóveda sigue cerrada. El chat estuvo cerca; la puerta no tiene corazón.", "La sala ganó esta ronda. Mimo exige revancha inmediata."],
     progress: ["La energía sube. ¿Quién diría que escribir en mayúsculas servía para algo?", "¡Efecto desbloqueado! El chat acaba de mejorar la iluminación. El presupuesto era imaginario."],
     hint: ["Pista para el equipo: miren los detalles que parecen demasiado obvios.", "No es por presionar, pero hay una estatua que lleva rato esperando atención."],
     room: ["Nueva sala, nuevo misterio y el chat ya viene con teorías de sobra.", "Una habitación recién salida del generador. Mimo recomienda mirar antes de tocar."],
@@ -231,6 +235,100 @@ card.dataset.mood = mood;
     state.captionTimer = window.setTimeout(() => caption.classList.remove("visible"), 30_000);
   }
 
+  function selectedRoomDuration() {
+    const duration = Number.parseInt($("roomDuration")?.value, 10);
+    return ROOM_DURATION_OPTIONS.includes(duration) ? duration : DEFAULT_ROOM_DURATION_SECONDS;
+  }
+
+  function formatCountdown(seconds) {
+    const safeSeconds = Math.max(0, Number(seconds) || 0);
+    return `${String(Math.floor(safeSeconds / 60)).padStart(2, "0")}:${String(safeSeconds % 60).padStart(2, "0")}`;
+  }
+
+  function setEndingMode(mode) {
+    const failure = mode === "failure";
+    const overlay = $("successOverlay");
+    overlay.classList.toggle("failed", failure);
+    $("endingIcon").textContent = failure ? "×" : "✦";
+    $("endingEyebrow").textContent = failure ? "TIEMPO AGOTADO" : "OBJETIVO COMPLETADO";
+    $("endingTitle").textContent = failure ? "LA SALA LOS VENCIÓ." : "EL CHAT LO HIZO.";
+    $("endingMessage").textContent = failure
+      ? "El mecanismo selló la bóveda. Reinicien para volver a intentarlo."
+      : "La puerta se abrió. El streamer puede respirar.";
+    $("endingButtonLabel").textContent = failure ? "INTENTAR DE NUEVO" : "JUGAR OTRA VEZ";
+  }
+
+  function startRoundTimer() {
+    state.roomDurationSeconds = selectedRoomDuration();
+    state.timerEndsAt = Date.now() + state.roomDurationSeconds * 1000;
+    state.timerFailed = false;
+    state.timerWarnings = new Set();
+    updateRoundTimer();
+  }
+
+  function failRound() {
+    if (state.opened || state.timerFailed) return;
+    state.timerFailed = true;
+    state.timerEndsAt = Date.now();
+    $("scene").classList.add("failed", "timer-critical");
+    $("successOverlay").classList.add("visible");
+    setEndingMode("failure");
+    $("sceneHint").textContent = "Tiempo agotado · la bóveda quedó sellada. Reinicien para volver a intentarlo.";
+    $("chatBannerText").textContent = "TIEMPO AGOTADO · La sala se cerró. Reinicien la ronda para intentarlo de nuevo.";
+    showEvent("TIEMPO AGOTADO · SALA FALLIDA");
+    showCaption("¡Tiempo agotado! El mecanismo selló la bóveda y la comunidad no logró escapar.");
+    addMessage({ user: "Sistema", text: "Se agotó el tiempo. La sala quedó cerrada; el streamer puede reiniciar la ronda.", system: true, highlight: true });
+    if (state.canControl || !state.streamerId) requestCaster("timeout");
+    else setCaster("Se acabó el tiempo. La bóveda ganó esta ronda… por ahora.", true, "plantilla", "worried");
+    updateRoundTimer();
+    if (state.canControl || !state.streamerId) persistGameState();
+  }
+
+  function updateRoundTimer() {
+    const timer = $("sceneTimer");
+    if (!timer) return;
+    const scene = $("scene");
+    scene.classList.remove("timer-warning", "timer-critical");
+    if (state.opened) {
+      timer.textContent = "✓ ESCAPASTE";
+      timer.title = "El equipo completó la sala";
+      return;
+    }
+    if (state.timerFailed) {
+      timer.textContent = "⏱ 00:00";
+      timer.title = "Tiempo agotado";
+      return;
+    }
+    if (!state.timerEndsAt) {
+      timer.textContent = `⏱ ${formatCountdown(selectedRoomDuration())}`;
+      timer.title = "El reloj comienza al iniciar una sala";
+      return;
+    }
+    const secondsLeft = Math.max(0, Math.ceil((state.timerEndsAt - Date.now()) / 1000));
+    timer.textContent = `⏱ ${formatCountdown(secondsLeft)}`;
+    timer.title = `Tiempo restante: ${formatCountdown(secondsLeft)}`;
+    if (secondsLeft <= 60) scene.classList.add("timer-warning");
+    if (secondsLeft <= 30) scene.classList.add("timer-critical");
+    for (const [threshold, message] of [
+      [60, "¡Queda 1 minuto! Resuelvan las pistas y abran la bóveda."],
+      [30, "¡30 segundos! El tiempo de la sala está por agotarse."],
+      [10, "¡10 segundos! Última oportunidad para abrir la bóveda."],
+    ]) {
+      if (secondsLeft <= threshold && !state.timerWarnings.has(threshold)) {
+        state.timerWarnings.add(threshold);
+        showEvent(message);
+        showCaption(message);
+        addMessage({ user: "Sistema", text: message, system: true, highlight: secondsLeft <= 30 });
+      }
+    }
+    if (secondsLeft === 0) failRound();
+  }
+
+  $("roomDuration")?.addEventListener("change", () => {
+    state.roomDurationSeconds = selectedRoomDuration();
+    if (!state.timerEndsAt && !state.timerFailed && !state.opened) updateRoundTimer();
+  });
+
   function rewardUser(user, points, cooldown = 0) {
     const key = String(user).toLocaleLowerCase("es");
     const now = Date.now();
@@ -360,11 +458,18 @@ card.dataset.mood = mood;
   }
 
   function openVault(user, source = "demo") {
+    if (state.timerFailed) {
+      showCaption("El tiempo se agotó. Reinicien la sala para volver a intentarlo.");
+      return;
+    }
     if (state.opened) {
       addMessage({ user: "Sistema", text: "La bóveda ya está abierta. El chat se ganó su momento de gloria.", system: true });
       return;
     }
     state.opened = true;
+    state.timerEndsAt = 0;
+    $("scene").classList.remove("failed", "timer-warning", "timer-critical");
+    setEndingMode("success");
     syncThreeScene("open");
     $("scene").classList.add("open");
     $("lockDisplay").textContent = getCode().split("").join(" ");
@@ -376,6 +481,7 @@ card.dataset.mood = mood;
     requestCaster("open");
     $("slotCode").classList.add("active");
     $("slotCode").querySelector("i").textContent = "✓";
+    updateRoundTimer();
   }
 
   function resolveDesignRequest(inputText) {
@@ -475,6 +581,10 @@ card.dataset.mood = mood;
     }
     const command = match[1].toLocaleLowerCase("es");
     const args = (match[2] || "").trim();
+    if (state.timerFailed && command !== "ayuda" && command !== "help") {
+      showCaption("La ronda terminó. Reinicien la sala para volver a jugar.");
+      return;
+    }
     if (command === "canje" && source === "demo") {
       const [kind = "", ...rest] = args.split(/\s+/);
       const aliases = { pista: "Pista", estilo: "Estilo", tema: "Tema", mimo: "Mimo" };
@@ -556,7 +666,7 @@ card.dataset.mood = mood;
     if (!state.streamerId) return;
     window.clearTimeout(state.persistTimer);
     state.persistTimer = window.setTimeout(() => {
-      api("/api/state/game", { method: "POST", body: JSON.stringify({ clues: state.clues, examined: state.examined, energy: state.energy, opened: state.opened, effects: state.effects }) }).catch(() => {});
+      api("/api/state/game", { method: "POST", body: JSON.stringify({ clues: state.clues, examined: state.examined, energy: state.energy, opened: state.opened, effects: state.effects, timerEndsAt: state.timerEndsAt, timerFailed: state.timerFailed }) }).catch(() => {});
     }, 250);
   }
 
@@ -651,14 +761,19 @@ card.dataset.mood = mood;
     showEvent(["openai", "gemini"].includes(room.source) ? `Sala generada con ${room.source === "gemini" ? "Gemini" : "OpenAI"} · mira el dossier` : `Plantilla jugable · ${room.templateLabel || "aventura"}`);
   }
 
-  function resetGame(showMessage = true) {
+  function resetGame(showMessage = true, startTimer = true) {
     state.clues = {};
     state.examined = {};
     state.energy = 12;
     state.opened = false;
-    $("scene").classList.remove("open", "energy-35", "energy-65", "energy-90");
+    state.timerFailed = false;
+    state.timerWarnings = new Set();
+    if (startTimer) startRoundTimer();
+    else state.timerEndsAt = 0;
+    $("scene").classList.remove("open", "failed", "timer-warning", "timer-critical", "energy-35", "energy-65", "energy-90");
     syncThreeScene("reset");
     $("successOverlay").classList.remove("visible");
+    setEndingMode("success");
     $("sceneHint").textContent = "Pista colectiva: examina los objetos para reunir el código.";
     $("clueCount").textContent = "0";
     $("energyValue").textContent = "12";
@@ -676,25 +791,34 @@ card.dataset.mood = mood;
     $("slotCode").classList.remove("active");
     $("slotCode").querySelector("i").textContent = "•••";
     $("chatBannerText").innerHTML = "Examinen los objetos, resuelvan sus acertijos y escriban <b>!codigo [código]</b>.";
+    updateRoundTimer();
     if (showMessage) {
       addMessage({ user: "Sistema", text: "Nueva ronda iniciada. Chat, la sala está lista.", system: true });
       setCaster("Nueva sala, misma oportunidad para que el chat salve al streamer.", false);
       showToast("Ronda reiniciada · vuelvan a investigar");
     }
-    persistGameState();
+    if (startTimer) persistGameState();
   }
 
   function restoreGameState(snapshot) {
     if (!snapshot || typeof snapshot !== "object") return;
+    const hadSavedTimer = Number.isFinite(Number(snapshot.timerEndsAt)) && Number(snapshot.timerEndsAt) > 0;
     window.clearTimeout(state.persistTimer);
     const streamerId = state.streamerId;
     state.streamerId = "";
-    resetGame(false);
+    resetGame(false, false);
     state.streamerId = streamerId;
     state.clues = snapshot.clues && typeof snapshot.clues === "object" ? snapshot.clues : {};
     state.examined = snapshot.examined && typeof snapshot.examined === "object" ? snapshot.examined : {};
     state.energy = Math.max(0, Math.min(100, Number(snapshot.energy) || 12));
     state.opened = Boolean(snapshot.opened);
+    state.timerFailed = Boolean(snapshot.timerFailed) && !state.opened;
+    const savedDeadline = Number(snapshot.timerEndsAt);
+    state.timerEndsAt = Number.isFinite(savedDeadline) && savedDeadline > 0
+      ? savedDeadline
+      : (state.opened || state.timerFailed ? 0 : Date.now() + selectedRoomDuration() * 1000);
+    const restoredSeconds = state.timerEndsAt ? Math.max(0, Math.ceil((state.timerEndsAt - Date.now()) / 1000)) : 0;
+    state.timerWarnings = new Set([60, 30, 10].filter((threshold) => restoredSeconds < threshold));
     if (snapshot.effects !== undefined) state.effects = snapshot.effects !== false;
     const solvedCount = Object.keys(state.clues).filter((id) => objectMeta[id]).length;
     Object.entries(objectMeta).forEach(([id, meta]) => {
@@ -726,7 +850,11 @@ card.dataset.mood = mood;
       $("slotCode").querySelector("i").textContent = state.opened ? "✓" : code.split("").join(" ");
     }
     $("scene").classList.toggle("open", state.opened);
-    $("successOverlay").classList.toggle("visible", state.opened);
+    $("scene").classList.toggle("failed", state.timerFailed);
+    $("successOverlay").classList.toggle("visible", state.opened || state.timerFailed);
+    setEndingMode(state.timerFailed ? "failure" : "success");
+    updateRoundTimer();
+    if (!hadSavedTimer && !state.opened && !state.timerFailed && state.canControl) persistGameState();
   }
 
   async function createRoom(theme) {
@@ -1071,6 +1199,8 @@ card.dataset.mood = mood;
   $("scene").classList.add("preset-bruma");
   state.recentCommands = loadRecentCommands();
   renderRecentCommands();
+  state.timerInterval = window.setInterval(updateRoundTimer, 1000);
+  updateRoundTimer();
   document.body.classList.toggle("overlay-mode", overlayMode);
   if (publicDemoMode) {
     const logoutForm = $("logoutForm");

@@ -19,6 +19,7 @@ The public demo runs a template-based simulation in the visitor's browser. It do
 - Twitch chat and channel-point redemption events through EventSub WebSocket.
 - Viewers can investigate clues, solve puzzles, request hints and reactions, and activate safe visual styles.
 - Three.js environments and a private OBS overlay link for the connected Twitch channel.
+- Timed rounds: choose 3, 4, or 5 minutes (4 by default), with one-minute, 30-second, and 10-second warnings and a visible failure state when time runs out.
 - Per-channel room, progress, chat, and encrypted Twitch tokens stored in PostgreSQL.
 
 The app never executes HTML, CSS, or JavaScript supplied by chat. Chat context sent to an AI provider may contain personal information; do not send private data. Nexo reads chat and channel-point redemptions. It does not create, modify, or fulfill Twitch rewards.
@@ -71,6 +72,8 @@ Render's free web instance may sleep between visits. Check current Render databa
 Start with the public demo at https://twitch-pro.onrender.com/demo. It has no login and stays on free templates. For live Twitch, Gemini, OBS, reward setup, and multi-streamer isolation, follow [USER-TEST-GUIDE.en.md](USER-TEST-GUIDE.en.md).
 
 ## Commands
+
+Choose a 3-, 4-, or 5-minute limit before starting. The countdown begins when a room starts or is reset. If it reaches zero before the vault opens, the round fails and the streamer can restart it.
 
 - !ayuda — list the current room's commands.
 - !examinar [object] — reveal that object's riddle.
