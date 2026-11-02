@@ -5,7 +5,7 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 - **Panel del streamer:** https://twitch-pro.onrender.com/ (inicia sesión con Twitch y autoriza tu canal).
 - **Acceso de espectador:** https://twitch-pro.onrender.com/demo (simulación pública con plantillas gratuitas; en un directo real, los espectadores participan desde el chat de Twitch).
 - **Rama de código desplegada:** https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render. El servicio de Render sigue esta rama; usa este enlace para revisar la versión actual.
-- **Documentación de entrega en inglés:** [README.en.md](README.en.md), [USER-TEST-GUIDE.en.md](USER-TEST-GUIDE.en.md), [DEVPOST-SUBMISSION.md](DEVPOST-SUBMISSION.md) y [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md).
+- **Paquete de entrega:** [lista final del hackathon](ENTREGA-HACKATHON.md), [borrador Devpost en inglés](DEVPOST-SUBMISSION.md), [guía de prueba en inglés](USER-TEST-GUIDE.en.md), [README en inglés](README.en.md) y [guion del video](VIDEO-SCRIPT.md).
 
 ## Funciones
 
@@ -20,7 +20,7 @@ Nexo convierte al chat de Twitch en un equipo que crea y resuelve un Escape Room
 
 En el modo de IA, el modelo recibe la situación elegida por el streamer al generar una sala. Para las reacciones, recibe los últimos ocho mensajes que llegaron a la aplicación. No envíes información privada en esos mensajes. Las respuestas se limitan a texto y opciones enumeradas; la aplicación no ejecuta HTML, CSS ni JavaScript generado. Twitch solicita `user:read:chat` y `channel:read:redemptions`: Nexo puede leer chat y canjes, pero no crear, cancelar ni completar recompensas. Los canjes permanecen sujetos al flujo de administración de Twitch. Mimo se muestra en el overlay y no escribe en el chat.
 
-Cada autorización identifica un canal por su Twitch User ID. PostgreSQL separa por ese ID la sala activa, el progreso, hasta siete días del chat, los tokens cifrados y los eventos recientes. El panel recupera los últimos 60 mensajes. En el acceso, selecciona streamer para autorizar el canal o espectador para abrir la demo pública. Los eventos se comparten entre instancias del servidor; un arrendamiento por canal evita sockets duplicados y una sesión controladora evita que dos pestañas ejecuten el mismo comando.
+Cada autorización identifica un canal por su Twitch User ID. PostgreSQL separa por ese ID la sala activa, el progreso, hasta siete días del chat, los tokens cifrados y los eventos recientes. El panel recupera los últimos 60 mensajes. En el acceso, pulsa **ENTRAR COMO STREAMER CON TWITCH** para autorizar un canal o **PROBAR COMO ESPECTADOR** para abrir la demo pública. Los eventos se comparten entre instancias del servidor; un arrendamiento por canal evita sockets duplicados y una sesión controladora evita que dos pestañas ejecuten el mismo comando.
 
 ## Requisitos y arranque
 
@@ -65,7 +65,7 @@ La clave se envía únicamente desde el servidor al proveedor seleccionado; no s
 
 1. Registra una aplicación en [Twitch Developer Console](https://dev.twitch.tv/console/apps) y copia el Client ID a `.env` como `TWITCH_CLIENT_ID`.
 2. Si el formulario pide OAuth Redirect URL, registra `http://localhost:4173`.
-3. En Render, pulsa **Iniciar sesión con Twitch** y autoriza el código en Twitch Activate. Eso autentica y conecta el canal.
+3. En Render, pulsa **ENTRAR COMO STREAMER CON TWITCH** y autoriza el código en Twitch Activate. Eso autentica y conecta el canal.
 4. Autoriza los permisos de lectura de chat y canjes. Si ya habías conectado Nexo antes de esta versión, vuelve a iniciar sesión para agregar el permiso de puntos.
 5. EventSub se suscribe a los mensajes y a los canjes de recompensas personalizadas. En producción, Nexo cifra los tokens en PostgreSQL y los renueva al reconectar. Si tu canal no puede usar puntos o Twitch rechaza esa suscripción, el chat sigue conectado y las recompensas no estarán disponibles.
 

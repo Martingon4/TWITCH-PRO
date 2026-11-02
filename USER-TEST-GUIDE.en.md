@@ -36,9 +36,9 @@ Do not publish the private OBS overlay URL, device codes, Twitch tokens, or API 
 
 ### Connect a channel and start a room
 
-1. Open https://twitch-pro.onrender.com/ and select **Sign in with Twitch**.
+1. Open https://twitch-pro.onrender.com/. On the welcome screen, choose **ENTRAR COMO STREAMER CON TWITCH** under “Quiero usarlo con mi canal.”
 2. Open Twitch Activate and authorize the requested read scopes for the channel.
-3. Wait until the dashboard shows the channel as connected. The session is tied to this Twitch account.
+3. Wait until the dashboard shows the channel as connected. The session is tied to this Twitch account. Viewers who only want to try the game can choose **PROBAR COMO ESPECTADOR** instead; that path opens the browser simulation.
 4. Choose a scenario or describe a situation and create a room. **Free template** mode does not call an AI API. **AI · with credits** sends a request to the selected provider and may use its quota.
 5. In OBS, add a **Browser Source** and paste the private overlay URL copied from the connected dashboard. Do not use localhost when the app is hosted on Render.
 6. From the second Twitch account, send commands shown in the room, such as !examinar [object] and !resolver [object] [answer].

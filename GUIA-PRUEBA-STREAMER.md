@@ -8,7 +8,7 @@ Nexo convierte la sala del streamer en un escape room cooperativo. El streamer p
 - Panel privado del streamer: https://twitch-pro.onrender.com/ (inicia sesión con Twitch)
 - Código de la versión desplegada: https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 
-En la pantalla inicial elige Streamer para autorizar tu canal con Twitch, o Espectador para entrar a la simulación pública. Twitch muestra afiliación/partner y estado en vivo, pero no puede detectar a todos los streamers: los canales no afiliados o fuera de línea también pueden elegir Streamer.
+En la pantalla inicial, selecciona **ENTRAR COMO STREAMER CON TWITCH** si vas a preparar una aventura para tu canal. No necesitas estar transmitiendo. Si solo quieres probar el juego, pulsa **PROBAR COMO ESPECTADOR**; entrarás a la simulación sin iniciar sesión. Twitch puede mostrar afiliación/partner y estado en vivo para algunas cuentas, pero no identifica a todos los streamers.
 
 La demo pública funciona como simulación local en el navegador. Usa plantillas gratuitas, no conecta una cuenta de Twitch, no llama a Gemini/OpenAI y no guarda el progreso. El panel principal usa autorización individual de Twitch para conectar el canal.
 
@@ -27,7 +27,7 @@ En esta página, los comandos no se publican en Twitch. Es una demo para que cua
 
 ### Antes de comenzar
 
-- Abre el panel principal y elige **Iniciar sesión con Twitch** para autorizar el canal.
+- Abre el panel principal y elige **ENTRAR COMO STREAMER CON TWITCH** para autorizar el canal.
 - El dueño del canal de prueba debe tener acceso a la aplicación de Twitch y aprobar el flujo de código de dispositivo.
 - Usa una segunda cuenta como espectador para escribir comandos reales en el chat del canal.
 - Node.js 22+ y una instalación local solo hacen falta si se prueba desde el código fuente.
@@ -36,7 +36,7 @@ No publiques enlaces de overlay, códigos de activación, tokens ni claves de AP
 
 ### Conectar y empezar una partida
 
-1. Abre https://twitch-pro.onrender.com/ y pulsa **Iniciar sesión con Twitch**. Abre Twitch Activate y autoriza los permisos de lectura solicitados.
+1. Abre https://twitch-pro.onrender.com/ y pulsa **ENTRAR COMO STREAMER CON TWITCH**. Abre Twitch Activate y autoriza los permisos de lectura solicitados.
 2. Espera a que el panel muestre el canal conectado. La sesión queda ligada a esa cuenta de Twitch.
 3. Elige un escenario o escribe una situación y pulsa **Crear sala**. El modo **Plantilla · gratis** no consume créditos. **IA · con créditos** usa el proveedor seleccionado y puede generar cargos/cuota.
 4. En OBS, añade una **Fuente de navegador** y pega la URL privada que copia el botón de overlay del panel conectado. No uses `localhost` en OBS si Render aloja la app.

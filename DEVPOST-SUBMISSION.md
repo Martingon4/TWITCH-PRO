@@ -1,6 +1,6 @@
 # Devpost submission package — Nexo
 
-Use this English draft in the Devpost form. Confirm the final demo links and eligibility details before submitting.
+Use this English draft in the Devpost form. Confirm the final demo links and eligibility details before submitting. See [ENTREGA-HACKATHON.md](ENTREGA-HACKATHON.md) for the final hand-in checklist.
 
 ## Project title
 
@@ -20,7 +20,7 @@ Submission language note: the app interface is currently in Spanish. Include the
 
 ## How we used OpenAI Codex
 
-We used OpenAI Codex throughout the build to plan the streamer and viewer flows, implement the Node.js server and Twitch EventSub integration, develop the Three.js game and OBS overlay, add PostgreSQL-backed channel isolation, improve the interface, and troubleshoot Gemini structured-output compatibility. We reviewed and adjusted the generated code and tested the experience against the deployed service.
+OpenAI Codex was used throughout the build to plan the streamer and viewer flows, implement the Node.js server and Twitch EventSub integration, develop the Three.js game and OBS overlay, add PostgreSQL-backed channel isolation, improve the interface, and troubleshoot Gemini structured-output compatibility. The team reviewed and adjusted the generated code. In the demo video, show the Codex project conversation and the relevant code changes. Edit this paragraph if it does not accurately describe the team's work.
 
 Edit this paragraph to match the team's actual use of Codex and the work shown in the video.
 
@@ -29,6 +29,7 @@ Edit this paragraph to match the team's actual use of Codex and the work shown i
 - Code repository (select the deployed branch): https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 - Public demo (no login): https://twitch-pro.onrender.com/demo
 - Streamer dashboard (Twitch sign-in): https://twitch-pro.onrender.com/
+- Public YouTube demo video: **ADD THE FINAL URL AFTER RECORDING AND UPLOADING**
 
 The public demo is a no-login, template-only browser simulation. It cannot connect Twitch or spend AI API quota. Live Twitch and OBS integration should be shown in the demo video.
 
@@ -39,11 +40,11 @@ The public demo is a no-login, template-only browser simulation. It cannot conne
 ## Judge test instructions
 
 1. Open the public demo link; it does not require an account.
-2. Choose a scenario card and select **Create room**.
+2. Choose a scenario card (or enter a short situation) and select **Crear sala**.
 3. Follow the object names and commands shown in the room. Use the simulated chat field to inspect and solve clues, request a hint, trigger a visual style, and ask Mimo to react.
-4. Use the displayed code to open the vault.
+4. Use the room's displayed code and command instructions to open the vault.
 5. To run a live Twitch integration test, clone the deployed source branch and follow README.en.md with your own Twitch Developer application and test channel. Local development does not require a hosted login.
-6. For a real Twitch and OBS demonstration without local setup, watch the linked video. Streamers sign in with their own Twitch account. Viewers can try the no-login public demo and join a real live game through Twitch chat.
+6. After upload, add the public YouTube video URL above. It should show the real Twitch and OBS flow. Streamers choose **ENTRAR COMO STREAMER CON TWITCH** and authorize their own channel. Viewers can try the no-login public demo and join a real live game through Twitch chat.
 
 ## Video outline (target runtime: 2:40; maximum: under 3:00)
 

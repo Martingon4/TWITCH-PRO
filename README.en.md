@@ -53,7 +53,7 @@ AI generation can consume the configured provider's quota or credits. Template m
 
 1. Create a Twitch Developer application and set TWITCH_CLIENT_ID.
 2. Set the Twitch client ID in the local .env or the Render environment.
-3. On Render, choose **Sign in with Twitch**; locally, configure the Twitch app and authorize through the dashboard.
+3. On Render, choose **ENTRAR COMO STREAMER CON TWITCH** on the welcome screen; viewers can choose **PROBAR COMO ESPECTADOR** to open the no-login simulation. Locally, configure the Twitch app and authorize through the dashboard.
 4. The channel owner completes Twitch's device authorization flow and approves the requested read scopes.
 5. Use a second Twitch account to send a command in the channel chat.
 6. Copy the private overlay URL from the dashboard into an OBS Browser Source.
