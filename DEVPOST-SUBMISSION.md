@@ -1,6 +1,6 @@
 # Devpost submission package — Nexo
 
-Use this English draft in the Devpost form. Confirm the final demo links and eligibility details before submitting. See [ENTREGA-HACKATHON.md](ENTREGA-HACKATHON.md) for the final hand-in checklist.
+Use this draft in the Devpost form. Confirm the project details and eligibility before submitting.
 
 ## Project title
 
@@ -10,28 +10,29 @@ Nexo: A Cooperative Escape Room for Twitch Chat
 
 Turn a Twitch stream into a live, chat-driven escape room where viewers investigate clues, unlock a vault, reshape the scene, and react with Mimo.
 
+## Team
+
+- Martin Gonzalez Muñoz
+- Enrique Hernandez Luna
+
 ## Project description
 
-Nexo gives Twitch streamers a cooperative escape-room format built around their live community. A streamer chooses a scenario and places the game in an OBS browser overlay. Viewers use Twitch chat commands to inspect objects, solve three clues against a configurable 3–5 minute countdown that begins when the first clue is examined, collect a vault code, request hints, and trigger safe visual styles. The timer warns the audience as time runs low and turns the scene into a clear failure state if the room is not solved. Mimo, a visual Co-Caster, reacts to chat and game events.
+Nexo gives Twitch streamers a cooperative escape-room format built around their live community. A streamer chooses a scenario and adds the game as an OBS browser overlay. Viewers use Twitch chat commands to inspect objects, solve clues against a 3–5 minute countdown that begins with the first examination, collect a vault code, request hints, and trigger safe visual styles. Mimo, a visual Co-Caster, reacts to chat and game events.
 
-The project connects to Twitch through device authorization, EventSub chat and channel-point redemption events, and a per-channel overlay. PostgreSQL keeps each channel's room, progress, recent chat, and encrypted Twitch tokens separate. Streamers can use free templates or optionally generate an original room with Gemini or OpenAI. The public demo stays on local templates and requires no login, Twitch authorization, or AI API key.
-
-Submission language note: the app interface is currently in Spanish. Include the English guide and English video narration or subtitles so judges can follow every interaction.
+The app connects to Twitch using device authorization and EventSub chat and channel-point events. PostgreSQL separates each channel’s room and progress. Streamers can use free templates or optionally generate an original room with Gemini or OpenAI. The public demo is a no-login template simulation and does not require Twitch authorization or an AI API key.
 
 ## How we used OpenAI Codex
 
-OpenAI Codex was used throughout the build to plan the streamer and viewer flows, implement the Node.js server and Twitch EventSub integration, develop the Three.js game and OBS overlay, add PostgreSQL-backed channel isolation, improve the interface, and troubleshoot Gemini structured-output compatibility. The team reviewed and adjusted the generated code. In the demo video, show the Codex project conversation and the relevant code changes. Edit this paragraph if it does not accurately describe the team's work.
-
-Edit this paragraph to match the team's actual use of Codex and the work shown in the video.
+We used OpenAI Codex to plan the streamer and viewer flows, build the Node.js application and Twitch integration, develop the Three.js scene and OBS overlay, add persistent multi-channel storage, and improve the interface. The team reviewed and refined the resulting implementation.
 
 ## Links
 
-- Code repository (select the deployed branch): https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
+- Repository branch: https://github.com/Martingon4/TWITCH-PRO/tree/codex/online-render
 - Public demo (no login): https://twitch-pro.onrender.com/demo
-- Streamer dashboard (Twitch sign-in): https://twitch-pro.onrender.com/
-- Public YouTube demo video: **ADD THE FINAL URL AFTER RECORDING AND UPLOADING**
+- Streamer dashboard: https://twitch-pro.onrender.com/
+- Public YouTube demo: https://youtu.be/Y5xiUa65oXw (Public; 2:59, checked in YouTube Studio)
 
-The public demo is a no-login, template-only browser simulation. It cannot connect Twitch or spend AI API quota. Live Twitch and OBS integration should be shown in the demo video.
+**Video evidence gap:** The uploaded cut demonstrates the Nexo app, but does not visibly show a real Twitch chat event reflected in OBS or the Codex development session. Record and replace the video with those two short shots if the challenge requires them. Do not describe the current cut as showing them.
 
 ## Codex session ID
 
@@ -39,37 +40,15 @@ The public demo is a no-login, template-only browser simulation. It cannot conne
 
 ## Judge test instructions
 
-1. Open the public demo link; it does not require an account.
-2. Choose a scenario card (or enter a short situation) and select **Crear sala**.
-3. Follow the object names and commands shown in the room. Use the simulated chat field to inspect and solve clues, request a hint, trigger a visual style, and ask Mimo to react.
-4. Use the room's displayed code and command instructions to open the vault.
-5. To run a live Twitch integration test, clone the deployed source branch and follow README.en.md with your own Twitch Developer application and test channel. Local development does not require a hosted login.
-6. After upload, add the public YouTube video URL above. It should show the real Twitch and OBS flow. Streamers choose **ENTRAR COMO STREAMER CON TWITCH** and authorize their own channel. Viewers can try the no-login public demo and join a real live game through Twitch chat.
+1. Open the public demo; no account is required.
+2. Choose a scenario and select **Crear sala**.
+3. Follow the on-screen object names and commands to examine objects, solve clues, request a hint, trigger a visual style, and ask Mimo to react.
+4. Use the displayed code and instructions to open the vault.
+5. For a live Twitch test, follow README.en.md using your own Twitch Developer application and test channel. The hosted public demo is a simulation, not a live Twitch session.
 
-## Video outline (target runtime: 2:40; maximum: under 3:00)
+## Final checks
 
-Use [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md) for the timed shot list and narration.
-
-Record in 16:9 with clear English narration or English subtitles. Use your own Twitch test channel and a second viewer account. Keep API keys, Twitch device codes, private overlay URL, email addresses, and personal chat messages out of frame. Do not use copyrighted music or unlicensed third-party assets.
-
-- **0:00–0:15 — The problem and idea.** Show the stream and say: “Fast Twitch chats are hard to follow. Nexo turns viewers into a team solving a live escape room.”
-- **0:15–0:45 — Real Twitch chat.** Show the streamer connected to Twitch, then send one actual viewer command such as !examinar [object]. Show that the real chat event appears and advances the room.
-- **0:45–1:15 — OBS overlay.** Show the same room in OBS. Solve one clue and show a visible clue reveal or scene effect.
-- **1:15–1:45 — Streamer control and variety.** Show the streamer choosing a different scenario template and starting a new room. Briefly point out the optional AI mode and free template fallback; do not expose the API key.
-- **1:45–2:15 — Participation and Mimo.** Use a safe !estilo ... command and !reacciona. Show Mimo's visual reaction and the vault progress.
-- **2:15–2:40 — Built with Codex.** Show the Codex project conversation and a short view of the code or changes. Explain that Codex helped build the Twitch integration, game flow, overlay, and UI. Avoid showing secret values.
-
-Replace bracketed command placeholders with the live room's actual object names. Keep the final edit under three minutes and upload it to YouTube with **Public** visibility.
-
-## Final submission checklist
-
-- [ ] Link the deployed branch, not the stale default main branch.
-- [ ] Keep the public demo accessible without login and without a paid API.
-- [ ] Include this project's feature description and accurate Codex workflow.
-- [ ] Enter the Codex session ID above.
-- [ ] Upload a YouTube video under three minutes with public visibility.
-- [ ] Show real Twitch functionality and Codex in the video.
-- [ ] Provide English narration/subtitles and English testing instructions.
-- [ ] Check all links in a signed-out browser and hide all credentials.
-- [ ] Confirm the team representative and each member meet the official eligibility rules.
-- [ ] Submit before the posted deadline.
+- Confirm the app and repository links are accessible to judges.
+- Add the team members and representative in Devpost; verify eligibility and the official rules.
+- The video is public and under three minutes, but should be replaced if a visible Twitch and Codex demonstration is required.
+- Submit the project before the official deadline.
