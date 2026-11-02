@@ -1,53 +1,94 @@
-# Nexo demo video script
+# Guion bilingüe del video de Nexo
 
-Target length: about 2 minutes 35 seconds. The official maximum is under 3 minutes. The video must be publicly visible on YouTube and include both the real Twitch experience and how the project was built with Codex.
+Duración objetivo: **2:40–2:50**. El hackathon pide un video de menos de tres minutos que muestre el proyecto funcionando con Twitch y cómo se usó Codex; debe publicarse en YouTube con visibilidad pública. Revisa los requisitos actuales en la [página oficial del hackathon](https://twitchcon-codex.devpost.com/).
 
-Record the narration in English or add accurate English subtitles to the Spanish narration. Replace bracketed placeholders with the real room's displayed object names and code. Use a test channel, a separate viewer account, and your own OBS scene. Keep all passwords, activation codes, private overlay URLs, email addresses, and API keys off-screen. Do not include copyrighted music.
+## Cómo grabarlo
 
-## Shot list and narration
+La opción más natural es **narrar en español y poner subtítulos en inglés**. Lee solo la columna en español. La columna en inglés es una traducción fiel para los subtítulos; no leas los dos idiomas en voz alta. Mantén los subtítulos sincronizados con cada bloque y reemplaza los corchetes por nombres que aparezcan en tu partida real.
 
-### 0:00–0:15 — Introduce the problem
+Graba con un canal Twitch de prueba y una segunda cuenta para enviar los comandos. En la parte de Twitch, muestra mensajes reales del chat y el cambio correspondiente en Nexo/OBS; la ruta `/demo` es una simulación local y no sirve para demostrar la conexión. Para la parte de Codex, muestra el hilo y fragmentos de código sin enseñar claves, tokens, códigos de autorización, correo ni URL privada del overlay.
 
-**Show:** Twitch stream with a busy chat; title card “Nexo: A Cooperative Escape Room for Twitch Chat”.
+## Guion y plano por plano
 
-**Narration:** “Fast-moving Twitch chats are hard to follow. Nexo gives viewers a shared mission: work together to solve an escape room while the streamer plays.”
+### 0:00–0:18 — El problema y la idea
 
-### 0:15–0:45 — Prove the Twitch connection
+**Muestra:** Twitch con el canal de prueba, luego el nombre de Nexo. Evita música con derechos.
 
-**Show:** Streamer dashboard indicating the test channel is connected. From the second viewer account, send a real command such as !examinar [object name]. Show that message in the Twitch chat and the corresponding clue update in Nexo.
+**Narración en español:**
 
-**Narration:** “The streamer connects a Twitch channel, chooses a room, and adds Nexo to OBS as a browser overlay. Viewers join through ordinary chat commands.”
+> En un chat rápido, muchos mensajes pasan antes de que el streamer pueda leerlos. Nexo convierte esa conversación en una misión compartida: el chat investiga, resuelve pistas y abre una bóveda durante el directo.
 
-### 0:45–1:15 — Show the game and overlay
+**English subtitles:**
 
-**Show:** OBS with the actual Nexo browser overlay. Solve one clue using the answer from the riddle; reveal a digit and show the progress toward the vault.
+> In a fast-moving chat, many messages pass before the streamer can read them. Nexo turns that conversation into a shared mission: viewers investigate, solve clues, and open a vault during the stream.
 
-**Narration:** “Each room has three clues. The chat investigates objects, shares answers, and reveals digits. When the team has the code, one final command opens the vault.”
+### 0:18–0:43 — El streamer prepara la sala
 
-### 1:15–1:45 — Show choices and visual feedback
+**Muestra:** Pantalla de bienvenida de Nexo, elección de streamer, panel conectado y selección de una plantilla. No muestres códigos de autorización.
 
-**Show:** Streamer selects a second template, starts a room, then send a safe command such as !estilo neon and !reacciona from Twitch chat. Show Three.js scene effects and Mimo.
+**Narración en español:**
 
-**Narration:** “Streamers can choose from themed templates or optionally generate a new room with AI. Chat can change approved visual styles, request a hint, and trigger Mimo's friendly Co-Caster reactions.”
+> El streamer inicia sesión con Twitch, elige una aventura y agrega el overlay de Nexo a OBS. Puede empezar con una plantilla gratuita, sin configurar una API de inteligencia artificial.
 
-### 1:45–2:10 — Explain the streamer impact
+**English subtitles:**
 
-**Show:** Room summary, chat activity, clue progress, and Mimo reaction together on the overlay.
+> The streamer signs in with Twitch, chooses an adventure, and adds the Nexo overlay to OBS. They can start with a free template, without setting up an AI API.
 
-**Narration:** “Nexo gives the streamer a repeatable interactive segment and gives viewers a reason to coordinate, make suggestions, and stay involved in the live moment.”
+### 0:43–1:23 — El chat juega en Twitch
 
-### 2:10–2:35 — Show how Codex helped build it
+**Muestra:** En el canal real, un espectador usa `!examinar [objeto]`; enseña la pista que aparece. Luego muestra `!resolver [objeto] [respuesta correcta]` y el dígito que se revela. Usa una respuesta verificada de esa sala. Si el tiempo alcanza, enseña `!codigo [código]` y la animación de apertura.
 
-**Show:** Codex project conversation and safe code diffs for Twitch EventSub, the escape-room flow, Three.js, and channel-separated storage. Do not show terminal secrets or environment values.
+**Narración en español:**
 
-**Narration:** “We built Nexo with OpenAI Codex. Codex helped us plan the streamer and viewer flows, implement the Twitch integration and game logic, develop the overlay, and refine the experience from real test feedback.”
+> Los espectadores no necesitan otra cuenta en Nexo: participan desde el chat de Twitch. Aquí alguien examina [nombre del objeto] y encuentra un acertijo. Otro espectador propone [respuesta correcta]. La sala valida la solución y revela una cifra. Al reunir la combinación, el chat puede abrir la bóveda.
 
-## Before uploading
+**English subtitles:**
 
-- Keep the final video under 3:00.
-- Show real Twitch chat, not only the public browser simulation.
-- Show the project being built with Codex.
-- Check English narration/subtitles and audio clarity.
-- Hide credentials and private identifiers.
-- Upload to YouTube and set visibility to **Public**.
-- Open the YouTube link in a signed-out browser and check playback.
+> Viewers do not need another Nexo account: they participate through Twitch chat. Here, someone examines [object name] and finds a riddle. Another viewer suggests [correct answer]. The room checks the solution and reveals a digit. Once the team has the combination, chat can open the vault.
+
+### 1:23–1:50 — La experiencia visual y Mimo
+
+**Muestra:** La misma sala en OBS, comando real `!estilo [estilo permitido]`, cambio de color/animación, luego `!reacciona` y la respuesta visual de Mimo.
+
+**Narración en español:**
+
+> La participación también cambia lo que se ve en pantalla. El chat activa estilos visuales seguros y puede pedir una reacción de Mimo, el Co-Caster visual de Nexo. Así, las acciones del público se reflejan en el directo.
+
+**English subtitles:**
+
+> Participation also changes what viewers see on screen. Chat can activate safe visual styles and request a reaction from Mimo, Nexo's visual Co-Caster. That way, audience actions show up in the stream.
+
+### 1:50–2:15 — Por qué ayuda al streamer
+
+**Muestra:** Progreso del equipo, pistas, overlay, Mimo; si alcanza, enseña rápidamente otra tarjeta de escenario.
+
+**Narración en español:**
+
+> Nexo le da al streamer una actividad que puede adaptar a distintos temas y comunidades. En vez de que cada mensaje quede aislado, los espectadores colaboran para avanzar en una misma historia. El objetivo es hacer más visible y entretenida la participación del chat.
+
+**English subtitles:**
+
+> Nexo gives streamers an activity they can adapt to different themes and communities. Instead of each message standing alone, viewers work together to move one story forward. The goal is to make chat participation more visible and entertaining.
+
+### 2:15–2:45 — Cómo se construyó con Codex
+
+**Muestra:** El hilo de Codex y un recorrido breve por cambios de integración Twitch/EventSub, el flujo de la sala y el overlay Three.js. Oculta cualquier dato privado.
+
+**Narración en español:**
+
+> Construimos Nexo con OpenAI Codex. Codex nos ayudó a planear los flujos para streamers y espectadores, desarrollar la conexión con Twitch, implementar los acertijos y mejorar el overlay visual. Probamos la experiencia y ajustamos el producto a partir de los comentarios de usuarios. Nexo: una aventura creada por el streamer y resuelta en comunidad.
+
+**English subtitles:**
+
+> We built Nexo with OpenAI Codex. Codex helped us plan the streamer and viewer flows, develop the Twitch connection, implement the puzzles, and improve the visual overlay. We tried the experience and refined the product based on user feedback. Nexo: an adventure created by the streamer and solved together.
+
+## Antes de subirlo
+
+- Mantén el video final debajo de **3:00**; apunta a 2:40–2:50 para tener margen.
+- Demuestra un comando que llegue desde un chat real de Twitch y el cambio correspondiente en Nexo/OBS.
+- Muestra Codex en pantalla y explica su papel con honestidad.
+- Sustituye todos los textos entre corchetes por nombres/respuestas reales de la sala que grabes.
+- Añade subtítulos en inglés sincronizados con la narración en español.
+- Oculta contraseñas, claves de API, tokens, códigos de autorización, correo y URL privada del overlay.
+- Usa solo imágenes, música y recursos de los que tengas permiso para publicar.
+- Sube a YouTube como **Público** y abre el enlace en una ventana privada para revisar que se reproduzca.
